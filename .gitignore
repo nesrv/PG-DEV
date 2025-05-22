@@ -1,0 +1,76 @@
+*.ova
+DEV2-16.ova
+# PostgreSQL data directory
+/data/
+
+# Compiled files
+*.o
+*.so
+*.a
+*.pyc
+*.pyo
+__pycache__/
+*.class
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+*.db
+*.dump
+
+# Environment and configuration
+.env
+.env.*
+!.env.example
+*.ini
+*.conf
+!example.conf
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+
+# Build and distribution
+/dist/
+/build/
+/out/
+
+# Dependencies
+/node_modules/
+/vendor/
+/.venv/
+/venv/
+/env/
+
+# Documentation generated files
+/doc/build/
+/doc/html/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Specific to PostgreSQL projects
+/pgdata/
+*.pgdump

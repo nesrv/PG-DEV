@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест по PostgreSQL</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #336699;
+            margin-bottom: 30px;
+        }
+        .question {
+            background-color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .question h3 {
+            margin-top: 0;
+            color: #336699;
+        }
+        .options {
+            margin-left: 20px;
+        }
+        .option {
+            margin-bottom: 10px;
+        }
+        label {
+            cursor: pointer;
+            display: inline-block;
+            padding: 5px;
+            width: 90%;
+        }
+        label:hover {
+            background-color: #f0f0f0;
+        }
+        button {
+            background-color: #336699;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            display: block;
+            margin: 20px auto;
+        }
+        button:hover {
+            background-color: #254b72;
+        }
+        #results {
+            display: none;
+            background-color: white;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .correct {
+            color: green;
+            font-weight: bold;
+        }
+        .incorrect {
+            color: red;
+            font-weight: bold;
+        }
+        .result-details {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .progress-bar {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .progress {
+            height: 30px;
+            background-color: #4CAF50;
+            border-radius: 5px;
+            text-align: center;
+            line-height: 30px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест по PostgreSQL</h1>
+    
+    <form id="quiz-form">
+        <div class="question" id="q1">
+            <h3>1. Где располагаются данные кластера (PGDATA) постгрес в виртуальной машине курса?</h3>
+            <div class="options">
+                <div class="option">
+                    <input type="checkbox" id="q1a" name="q1" value="a">
+                    <label for="q1a">/var/lib/postgresql/16/main</label>
+                </div>
+                <div class="option">
+                    <input type="checkbox" id="q1b" name="q1" value="b">
+                    <label for="q1b">/etc/postgresql/16/main</label>
+                </div>
+                <div class="option">
+                    <input type="checkbox" id="q1c" name="q1" value="c">
+                    <label for="q1c">/usr/local/pgsql/data</label>
+                </div>
+                <div class="option">
+                    <input type="checkbox" id="q1d" name="q1" value="d">
+                    <label for="q1d">/usr/local/pgsql/data/pg_log</label>
+                </div>
+                <div class="option">
+                    <input type="checkbox" id="q1e" name="q1" value="e">
+                    <label for="q1e">/var/log/postgresql</label>
+                </div>
+                <div class="option">
+                    <input type="checkbox" id="q1f" name="q1" value="f">
+                    <label for="q1f">/opt/postgres</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="question" id="q2">
+            <h3>2. Где располагается журнал сервера в виртуальной машине курса постгрес?</h3>
+            <div class="options">
+                <div class="option">
+                    <input type="checkbox" id="q2a" name="q2" value="a">
+                    <label for="q2a">/etc/postgresql/16/main</label>
+                </div>
+                <div class="option">
+                    <input type="checkbox" id="q2b" name="q2" value="b">
+                    <label for="q2b">/usr/local/pgsql/data</label>
+                </div>
+                <div class="option">
+                    <input type="checkbox" id="q2c" name="q2" value="c">
+                    <label for="q2c">/var/lib/postgresql/16/main</label>
+                </div>
+                <div class="option">
+                    <input type="checkbox" id="q2d" name="q2" value="d">
+                    <label for="q2d">/usr/local/pgsql/data/pg_log</label>
+                </div>
+                <div class="option">
+                    <input type="checkbox" id="q2e" name="q2" value="e">
+                    <label for="q2e">/opt/postgres</label>
+                </div>
+                <div class="option">
+                    <input type="checkbox" id="q2f" name="q2" value="f">
+                    <label for="q2f">/var/log/postgresql</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="question" id="q3">
+            <h3>3. Какой инструмент принято использовать в курсе для управления сервером в постгрес?</h3>
+            <div class="options">
+                <div class="option">
+                    <input type="radio" id="q3a" name="q3" value="a">
+                    <label for="q3a">pg_ctl</label>
+                </div>
+                <div class="option">
+                    <input type="radio" id="q3b" name="q3" value="b">
+                    <label for="q3b">pg_ctlcluster</label>
+                </div>
+                <div class="option">
+                    <input type="radio" id="q3c" name="q3" value="c">
+                    <label for="q3c">service</label>
+                </div>
+                <div class="option">
+                    <input type="radio" id="q3d" name="q3" value="d">
+                    <label for="q3d">systemctl</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="question" id="q4">
+            <h3>4. Какая команда psql показывает значение параметров конфигурации сервера PostgreSQL 16?</h3>
+            <div class="options">
+                <div class="option">
+                    <input type="radio" id="q4a" name="q4" value="a">
+                    <label for="q4a">\dc</label>
+                </div>
+                <div class="option">
+                    <input type="radio" id="q4b" name="q4" value="b">
+                    <label for="q4b">\dconfig</label>
+                </div>
+                <div class="option">
+                    <input type="radio" id="q4c" name="q4" value="c">
+                    <label for="q4c">\dp</label>
+                </div>
+                <div class="option">
+                    <input type="radio" id="q4d" name="q4" value="d">
+                    <label for="q4d">\getenv</label>
+                </div>
+                <div class="option">
+                    <input type="radio" id="q4e" name="q4" value="e">
+                    <label for="q4e">\list</label>
+                </div>
+                <div class="option">
+                    <input type="radio" id="q4f" name="q4" value="f">
+                    <label for="q4f">\pset</label>
+                </div>
+                <div class="option">
+                    <input type="radio" id="q4g" name="q4" value="g">
+                    <label for="q4g">ничего из перечисленного</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="question" id="q5">
+            <h3>5. Что такое "кластер" в PostgreSQL?</h3>
+            <div class="options">
+                <div class="option">
+                    <input type="radio" id="q5a" name="q5" value="a">
+                    <label for="q5a">Совокупность всех таблиц в базе данных</label>
+                </div>
+                <div class="option">
+                    <input type="radio" id="q5b" name="q5" value="b">
+                    <label for="q5b">Совокупность всех серверов организации</label>
+                </div>
+                <div class="option">
+                    <input type="radio" id="q5c" name="q5" value="c">
+                    <label for="q5c">Совокупность всех баз данных на данном сервере</label>
+                </div>
+                <div class="option">
+                    <input type="radio" id="q5d" name="q5" value="d">
+                    <label for="q5d">Совокупность всех пользователей базы данных</label>
+                </div>
+                <div class="option">
+                    <input type="radio" id="q5e" name="q5" value="e">
+                    <label for="q5e">Все остальные ответы неверны</label>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" id="submit-btn">Проверить результаты</button>
+    </form>
+
+    <div id="results">
+        <h2>Результаты теста</h2>
+        <p>Вы ответили правильно на <span id="correct-count">0</span> из 5 вопросов.</p>
+        <div class="progress-bar">
+            <div class="progress" id="progress-bar"></div>
+        </div>
+        <p>Ваш результат: <span id="percentage">0</span>%</p>
+        <div class="result-details" id="result-details"></div>
+        <button type="button" id="retry-btn">Пройти тест заново</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const correctAnswers = {
+                q1: ['a'], // /var/lib/postgresql/16/main
+                q2: ['f'], // /var/log/postgresql
+                q3: ['b'], // pg_ctlcluster
+                q4: ['b'], // \dconfig
+                q5: ['c']  // Совокупность всех баз данных на данном сервере
+            };
+
+            const submitBtn = document.getElementById('submit-btn');
+            const retryBtn = document.getElementById('retry-btn');
+            const resultsDiv = document.getElementById('results');
+            const correctCountSpan = document.getElementById('correct-count');
+            const percentageSpan = document.getElementById('percentage');
+            const progressBar = document.getElementById('progress-bar');
+            const resultDetails = document.getElementById('result-details');
+
+            submitBtn.addEventListener('click', function() {
+                let correctCount = 0;
+                let detailsHTML = '';
+
+                // Проверка вопроса 1 (множественный выбор)
+                const q1Selected = Array.from(document.querySelectorAll('input[name="q1"]:checked')).map(el => el.value);
+                const q1Correct = arraysEqual(q1Selected, correctAnswers.q1);
+                if (q1Correct) correctCount++;
+                detailsHTML += createResultDetail(1, q1Correct);
+
+                // Проверка вопроса 2 (множественный выбор)
+                const q2Selected = Array.from(document.querySelectorAll('input[name="q2"]:checked')).map(el => el.value);
+                const q2Correct = arraysEqual(q2Selected, correctAnswers.q2);
+                if (q2Correct) correctCount++;
+                detailsHTML += createResultDetail(2, q2Correct);
+
+                // Проверка вопроса 3 (одиночный выбор)
+                const q3Selected = document.querySelector('input[name="q3"]:checked')?.value;
+                const q3Correct = q3Selected === correctAnswers.q3[0];
+                if (q3Correct) correctCount++;
+                detailsHTML += createResultDetail(3, q3Correct);
+
+                // Проверка вопроса 4 (одиночный выбор)
+                const q4Selected = document.querySelector('input[name="q4"]:checked')?.value;
+                const q4Correct = q4Selected === correctAnswers.q4[0];
+                if (q4Correct) correctCount++;
+                detailsHTML += createResultDetail(4, q4Correct);
+
+                // Проверка вопроса 5 (одиночный выбор)
+                const q5Selected = document.querySelector('input[name="q5"]:checked')?.value;
+                const q5Correct = q5Selected === correctAnswers.q5[0];
+                if (q5Correct) correctCount++;
+                detailsHTML += createResultDetail(5, q5Correct);
+
+                // Отображение результатов
+                const percentage = (correctCount / 5) * 100;
+                correctCountSpan.textContent = correctCount;
+                percentageSpan.textContent = percentage;
+                progressBar.style.width = percentage + '%';
+                resultDetails.innerHTML = detailsHTML;
+                
+                // Показать результаты
+                resultsDiv.style.display = 'block';
+                submitBtn.style.display = 'none';
+                
+                // Прокрутка к результатам
+                resultsDiv.scrollIntoView({ behavior: 'smooth' });
+            });
+
+            retryBtn.addEventListener('click', function() {
+                // Сбросить форму
+                document.getElementById('quiz-form').reset();
+                
+                // Скрыть результаты
+                resultsDiv.style.display = 'none';
+                submitBtn.style.display = 'block';
+                
+                // Прокрутка к началу теста
+                document.querySelector('h1').scrollIntoView({ behavior: 'smooth' });
+            });
+
+            function arraysEqual(arr1, arr2) {
+                if (arr1.length !== arr2.length) return false;
+                const sortedArr1 = [...arr1].sort();
+                const sortedArr2 = [...arr2].sort();
+                return sortedArr1.every((val, idx) => val === sortedArr2[idx]);
+            }
+
+            function createResultDetail(questionNumber, isCorrect) {
+                return `
+                    <p>
+                        <span class="${isCorrect ? 'correct' : 'incorrect'}">
+                            Вопрос ${questionNumber}: ${isCorrect ? 'Правильно' : 'Неправильно'}
+                        </span>
+                    </p>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
