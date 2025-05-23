@@ -70,6 +70,101 @@ Sale_ID | Partner_ID | Client_ID | Sold_Date       | Reference_Code | Sold_QTY |
 
 
 
+Для приведения к 4НФ необходимо устранить многозначные зависимости. В нашем случае многозначные зависимости могут возникнуть, если один партнер может иметь несколько городов или один клиент может быть зарегистрирован в нескольких городах.
+
+**Таблица 1: Партнеры (Partners)**
+* Partner_ID (PK)
+* Partner_Name
+
+**Таблица 2: Города партнеров (Partner_Cities)**
+* Partner_City_ID (PK)
+* Partner_ID (FK)
+* City_Code (FK)
+
+**Таблица 3: Клиенты (Clients)**
+* Client_ID (PK)
+* INN_Client
+* Client_Name
+* Client_Category
+
+**Таблица 4: Города клиентов (Client_Cities)**
+* Client_City_ID (PK)
+* Client_ID (FK)
+* City_Code (FK)
+
+**Таблица 5: Города (Cities)**
+* City_Code (PK)
+* City_Name
+
+**Таблица 6: Продажи (Sales)**
+* Sale_ID (PK)
+* Partner_ID (FK)
+* Client_ID (FK)
+* Sold_Date
+* Reference_Code
+* Sold_QTY
+* Purchase_Price
+
+**Связи между таблицами:**
+* Таблица Sales ссылается на Partners через Partner_ID
+* Таблица Sales ссылается на Clients через Client_ID
+* Таблица Partner_Cities связывает Partners и Cities
+* Таблица Client_Cities связывает Clients и Cities
+
+**Заполнение таблиц:**
+
+**Partners:**
+```
+Partner_ID | Partner_Name
+1000576 | КаэрМ
+```
+
+**Partner_Cities:**
+```
+Partner_City_ID | Partner_ID | City_Code
+1 | 1000576 | 66
+```
+
+**Clients:**
+```
+Client_ID | INN_Client | Client_Name | Client_Category
+1 | 1234695212 | ООО Вешки | Ритейл
+```
+
+**Client_Cities:**
+```
+Client_City_ID | Client_ID | City_Code
+1 | 1 | 99
+```
+
+**Cities:**
+```
+City_Code | City_Name
+66 | Екатеринбург
+99 | Москва
+```
+
+**Sales:**
+```
+Sale_ID | Partner_ID | Client_ID | Sold_Date | Reference_Code | Sold_QTY | Purchase_Price
+1 | 1000576 | 1 | 08.09.2021 12:49 | FERT-1233 | 10 | 5000
+```
+
+Такая структура удовлетворяет требованиям 4НФ, так как:
+1. Устраняет многозначные зависимости
+2. Каждый атрибут зависит только от первичного ключа
+3. Все данные нормализованы
+4. Нет повторяющихся групп данных
+5. Каждая связь между сущностями представлена отдельной таблицей
+
+Преимущества такой структуры:
+* Гибкость при изменении данных
+* Возможность хранения множественных значений для партнеров и клиентов
+* Простота обновления информации о городах
+* Отсутствие избыточных данных
+* Улучшенная целостность данных
+
+
 
 
 
