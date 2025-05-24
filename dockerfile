@@ -1,0 +1,7 @@
+FROM postgres:17
+
+ENV POSTGRES_DB=bookstore
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=postgres
+
+EXPOSE 5432
