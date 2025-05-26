@@ -21,3 +21,5 @@
 - **Логин:** `student`
 - **Пароль:** `student`
 
+
+[https://eshift.ktalk.ru/ntpr9lwu9k2v](https://eshift.ktalk.ru/ntpr9lwu9k2v)
