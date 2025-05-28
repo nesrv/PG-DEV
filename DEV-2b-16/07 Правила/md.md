@@ -104,8 +104,8 @@ DELETE FROM employees WHERE id = OLD.id AND department = 'Маркетинг';
 Теперь можно работать с представлением как с обычной таблицей:
 ```sql
 INSERT INTO marketing_employees (name, salary) VALUES ('Джон Бидон', 50000);
-UPDATE marketing_employees SET salary = 55000 WHERE name = ''Джон Бидон';
-DELETE FROM marketing_employees WHERE name = ''Джон Бидон';
+UPDATE marketing_employees SET salary = 55000 WHERE name = 'Джон Бидон';
+DELETE FROM marketing_employees WHERE name = 'Джон Бидон';
 ```
 
 ## Важные замечания о RULE:
