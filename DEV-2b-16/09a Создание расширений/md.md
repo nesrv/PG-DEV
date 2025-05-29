@@ -1,6 +1,5 @@
 
 
-![1748463100836](image/md/1748463100836.png)
 
 ![alt text](image.png)
 
