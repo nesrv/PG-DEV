@@ -13,7 +13,20 @@ FROM students s
 NATURAL JOIN exams e
 WHERE e.passed IS NOT NULL;
 
-UNION
+
+
+-- проще
+SELECT student_id, name, course, 'attended_only' AS status
+FROM students
+NATURAL JOIN attendance
+EXCEPT
+SELECT student_id, name, course, 'attended_only'
+FROM students
+NATURAL JOIN exams
+WHERE passed IS NOT NULL;
+
+
+
 
 -- Подзапрос 2: Студенты, сдавшие экзамен, но не посещавшие курс
 SELECT DISTINCT s.student_id, s.name, e.course, 'exam_only' AS status
@@ -24,6 +37,19 @@ EXCEPT
 SELECT DISTINCT s.student_id, s.name, a.course, 'exam_only'
 FROM students s
 NATURAL JOIN attendance a;
+
+
+
+--проще
+
+SELECT student_id, name, course, 'exam_only' AS status
+FROM students
+NATURAL JOIN exams
+WHERE passed IS NOT NULL
+EXCEPT
+SELECT student_id, name, course, 'exam_only'
+FROM students
+NATURAL JOIN attendance;
 ```
 
 ---
