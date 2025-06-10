@@ -1,0 +1,5 @@
+COURSE=DEV1
+course=dev1
+POST_RESET='sudo pg_ctlcluster 16 main start'
+VM_RAM=2048 # megabytes
+VM_PRODUCT='DEV1. Разработка серверной части приложений PostgreSQL 16. Базовый курс'

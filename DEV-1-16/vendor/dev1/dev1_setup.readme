@@ -1,0 +1,13 @@
+
+См. modules/course_setup.readme
+
+После настроечного скрипта:
+
+pgAdmin 4 (только для amd64)
+
+    - запустить pgAdmin (первый запуск может занять до минуты)
+    - при появлении диалога запроса пароля для default keyring оставить поле пароля пустым и нажать Continue - Continue
+    - дождаться открытия окна pgAdmin и закрыть его
+    - отключить сбор статистики, чтобы не спамить базу:
+      sqlite3 ~/.pgadmin/pgadmin4.db "replace into user_preferences (pid,uid,value) select p.id,u.id,'999999' from preferences p, user u where p.name like '%stats_refresh';"
+

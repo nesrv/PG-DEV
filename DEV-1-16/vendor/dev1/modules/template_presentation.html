@@ -1,0 +1,286 @@
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF8">
+  <title>{{course}}. {{topic}}</title>
+  <style>
+    body {
+      background-color: #000000;
+    }
+    .navigation {
+      width: 1px;
+      height: 100%;
+      position: fixed;
+      top: 0;
+      background-color: #888888;
+      opacity: 0.3;
+      transition: 0.5s ease;
+      z-index: 2;
+      line-height: 100vh;
+      color: white;
+      text-align: center;
+      font-weight: bold;
+      font-size: 0px;
+    }
+    .navigation:hover {
+      width: 50px;
+      font-size: 50px;
+    }
+    .term {
+      width: 100%;
+      height: 98vh;
+      position:fixed;
+      top: 0;
+      left: 0;
+      margin: auto;
+      border-left: 1em solid white;
+      border-right: none;
+      border-top: none;
+      border-bottom: 2vh solid white;
+      opacity: 0;
+      z-index: 1;
+      box-shadow: 0px 20px 20px black;
+    }
+    .slide {
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      margin: auto;
+      z-index: 0;
+      opacity: 0;
+    }
+  </style>
+</head>
+<body>
+  <iframe id="terminal" class="term" src="http://localhost:8080"></iframe>
+  <div id="left" class="navigation" style="left: 0;">&lt;</div>
+  <div id="right" class="navigation" style="right: 0;">&gt;</div>
+  <img id="slide_01" class="slide" src="data:image/png;base64,{{01}}"/>
+  <img id="slide_02" class="slide" src="data:image/png;base64,{{02}}"/>
+  <img id="slide_03" class="slide" src="data:image/png;base64,{{03}}"/>
+  <img id="slide_04" class="slide" src="data:image/png;base64,{{04}}"/>
+  <img id="slide_05" class="slide" src="data:image/png;base64,{{05}}"/>
+  <img id="slide_06" class="slide" src="data:image/png;base64,{{06}}"/>
+  <img id="slide_07" class="slide" src="data:image/png;base64,{{07}}"/>
+  <img id="slide_08" class="slide" src="data:image/png;base64,{{08}}"/>
+  <img id="slide_09" class="slide" src="data:image/png;base64,{{09}}"/>
+  <img id="slide_10" class="slide" src="data:image/png;base64,{{10}}"/>
+  <img id="slide_11" class="slide" src="data:image/png;base64,{{11}}"/>
+  <img id="slide_12" class="slide" src="data:image/png;base64,{{12}}"/>
+  <img id="slide_13" class="slide" src="data:image/png;base64,{{13}}"/>
+  <img id="slide_14" class="slide" src="data:image/png;base64,{{14}}"/>
+  <img id="slide_15" class="slide" src="data:image/png;base64,{{15}}"/>
+  <img id="slide_16" class="slide" src="data:image/png;base64,{{16}}"/>
+  <img id="slide_17" class="slide" src="data:image/png;base64,{{17}}"/>
+  <img id="slide_18" class="slide" src="data:image/png;base64,{{18}}"/>
+  <img id="slide_19" class="slide" src="data:image/png;base64,{{19}}"/>
+  <img id="slide_20" class="slide" src="data:image/png;base64,{{20}}"/>
+  <img id="slide_21" class="slide" src="data:image/png;base64,{{21}}"/>
+  <img id="slide_22" class="slide" src="data:image/png;base64,{{22}}"/>
+  <img id="slide_23" class="slide" src="data:image/png;base64,{{23}}"/>
+  <img id="slide_24" class="slide" src="data:image/png;base64,{{24}}"/>
+  <img id="slide_25" class="slide" src="data:image/png;base64,{{25}}"/>
+  <img id="slide_26" class="slide" src="data:image/png;base64,{{26}}"/>
+  <img id="slide_27" class="slide" src="data:image/png;base64,{{27}}"/>
+  <img id="slide_28" class="slide" src="data:image/png;base64,{{28}}"/>
+  <img id="slide_29" class="slide" src="data:image/png;base64,{{29}}"/>
+  <img id="slide_30" class="slide" src="data:image/png;base64,{{30}}"/>
+  <img id="slide_31" class="slide" src="data:image/png;base64,{{31}}"/>
+  <img id="slide_32" class="slide" src="data:image/png;base64,{{32}}"/>
+  <img id="slide_33" class="slide" src="data:image/png;base64,{{33}}"/>
+  <img id="slide_34" class="slide" src="data:image/png;base64,{{34}}"/>
+  <img id="slide_35" class="slide" src="data:image/png;base64,{{35}}"/>
+  <img id="slide_36" class="slide" src="data:image/png;base64,{{36}}"/>
+  <img id="slide_37" class="slide" src="data:image/png;base64,{{37}}"/>
+  <img id="slide_38" class="slide" src="data:image/png;base64,{{38}}"/>
+  <img id="slide_39" class="slide" src="data:image/png;base64,{{39}}"/>
+
+<script>
+  var demopages = [{{demopages}}];
+  var terminal = document.getElementById("terminal"),
+      left = document.getElementById("left"),
+      right = document.getElementById("right");
+  var pageNum = 1,
+      totalPages = {{numpages}};
+
+/**
+ * Sleep
+ * @param time Sleep time in milliseconds.
+ */
+function sleep (time) {
+  return new Promise((resolve) => setTimeout(resolve, time));
+}
+
+/**
+ * Moves the specified slide to the top.
+ */
+function displayPage(num) {
+  console.log("display " + String(num).padStart(2,'0'));
+  document.getElementById('slide_' + String(num).padStart(2,'0')).style.opacity = "1";
+}
+
+/**
+ * Moves the specified slide to the bottom.
+ */
+function hidePage(num) {
+  console.log("hide " + String(num).padStart(2,'0'));
+  document.getElementById('slide_' + String(num).padStart(2,'0')).style.opacity = "0";
+}
+
+/**
+ * Shows previous page.
+ */
+function goPrevPage() {
+  console.log("goPrevPage; pageNum = " + pageNum);
+  if (pageNum <= 1) {
+    return;
+  }
+  if (demopages.includes(pageNum)) { // terminal goes out
+    terminal.style.transition = "2s ease";
+    terminal.style.MozTransform = "translate("+(0)+"px,0)";
+    terminal.style.opacity = "0";
+    terminal.blur();
+  }
+  hidePage(pageNum);
+  pageNum--;
+  displayPage(pageNum);
+  if (demopages.includes(pageNum)) { // terminal comes in
+    terminal.style.transition = "0s";
+    terminal.style.MozTransform = "translate("+(-2*screen.width)+"px,0)";
+    sleep(10).then(() => {
+      terminal.style.transition = "1s ease";
+      terminal.style.MozTransform = "translate("+(-screen.width)+"px,0)";
+      terminal.style.opacity = "1";
+      terminal.focus();
+    });
+  }
+}
+
+/**
+ * Shows next page.
+ */
+function goNextPage() {
+  console.log("goNextPage; pageNum = " + pageNum);
+  if (pageNum >= totalPages) {
+    return;
+  }
+  if (demopages.includes(pageNum)) { // terminal goes out
+    terminal.style.transition = "2s ease";
+    terminal.style.MozTransform = "translate("+(-2*screen.width)+"px,0)";
+    terminal.style.opacity = "0";
+    terminal.blur();
+  }
+  hidePage(pageNum);
+  pageNum++;
+  displayPage(pageNum);
+  if (demopages.includes(pageNum)) { // terminal comes in
+    terminal.style.transition = "0s";
+    terminal.style.MozTransform = "translate(0px,0)";
+    sleep(10).then(() => {
+      terminal.style.transition = "1s ease";
+      terminal.style.MozTransform = "translate("+(-screen.width)+"px,0)";
+      terminal.style.opacity = "1";
+      terminal.focus();
+    });
+  }
+}
+
+/**
+ * Decrease terminal height by 1%
+ */
+function decreaseTermHeight() {
+    var h = (terminal.style.height || '98vh').replace(/\D/g,'');
+    h = Math.max(h-1,50);
+    terminal.style.height = h + 'vh';
+}
+
+/**
+ * Increase terminal height by 1%
+ */
+function increaseTermHeight() {
+    var h = (terminal.style.height || '98vh').replace(/\D/g,'');
+    h = Math.min(h*1+1,98); // to prevent concatenation
+    terminal.style.height = h + 'vh';
+}
+
+// Side navigation
+
+left.addEventListener('click', e => {
+  goPrevPage();
+});
+
+right.addEventListener('click', e => {
+  goNextPage();
+});
+
+// Change pages by arrows keys
+
+function checkKey(e) {
+    e = e || window.event;
+
+console.log("checkKey: " + e.keyCode)
+
+    if (e.keyCode == '37' /* left */ /*|| e.keyCode == '40'*/ /* down */) {
+       goPrevPage();
+    }
+    else if (e.keyCode == '39' /* right */ /*|| e.keyCode == '38'*/ /* up */) {
+       goNextPage();
+    }
+}
+terminal.focus();
+terminal.blur();
+document.onkeydown = checkKey;
+
+// обработчик событий от iframe терминала
+window.addEventListener('message', e => {
+    console.log("keystroke: ["+e.data.keystroke.charCodeAt(0)+'] '+e.data.keystroke);
+    if (e.data.keystroke.charCodeAt(0) == 27) {
+        switch (e.data.keystroke.substring(1)) {
+            case 'OD': // left
+                goPrevPage();
+                break;
+            case 'OC': // right
+                goNextPage();
+                break;
+            case '[1;5A': // ctrl+up
+                decreaseTermHeight();
+                console.log("Ctrl+Up");
+                break;
+            case '[1;5B': // ctrl+down
+                increaseTermHeight();
+                console.log("Ctrl+Down");
+                break;
+            /*
+            case '[1;5C': // ctrl+right
+                decreaseTermWidth();
+                console.log("Ctrl+Right");
+                break;
+            case '[1;5D': // ctrl+left
+                increaseTermWidth();
+                console.log("Ctrl+Left");
+                break;
+            */
+        }
+    }
+});
+
+// Make the terminal a bit sorter than the window
+
+function resizeTerminal() {
+  const offset = 1;
+  terminal.style.width = (screen.width - 2*offset) + "px";
+  terminal.style.left = (screen.width + offset) + "px";
+}
+window.addEventListener('resize', resizeTerminal());
+
+resizeTerminal();
+
+// Make sure the first page is on top
+
+console.log("Starting page = " + pageNum);
+displayPage(pageNum);
+
+</script>
+</body>
+</html>

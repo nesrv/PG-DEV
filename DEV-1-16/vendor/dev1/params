@@ -1,0 +1,112 @@
+# HOME for postgres
+export H=`cat /etc/passwd | awk -F ':' '/^postgres:/ {print $6}'`
+
+export OSUSER=student
+
+# основной сервер (A)
+export CONTROL_A=pg_ctlcluster
+export VERSION_A=16
+export CLUSTER_A=main
+export PGDATA_A="/var/lib/postgresql/$VERSION_A/$CLUSTER_A"
+export CONF_A="/etc/postgresql/$VERSION_A/$CLUSTER_A"
+export BINLIB_A="/usr/lib/postgresql/$VERSION_A"
+export BINPATH_A="$BINLIB/bin/"
+export LOG_A="/var/log/postgresql/postgresql-$VERSION_A-$CLUSTER_A.log"
+
+# терминалы
+export PSQL_PROMPT='=> '
+export PAUSE_PROMPT='..........................................................................................'
+export PAUSE_RETURN_PROMPT='>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+
+# каталог для дополнительных файлов
+export USERDIR=~/tmp
+
+# Инициализация
+init() {
+
+    if [[ ! (`whoami` =~ student) ]]; then
+      echo "$0 : Run me as student"
+      exit 1
+    fi
+
+    # если не имитируем выполнение практики слушателем, то возвращаемся к исходному состоянию
+    if [ "$run_only_visible" == false ] ; then
+      ~/reset.sh
+    fi
+
+    psql_open A 1
+}
+
+# Инициализация в начале скрипта практики app
+init_app() {
+
+    if [[ ! (`whoami` =~ student) ]]; then
+      echo "$0 : Run me as student"
+      exit 1
+    fi
+
+    # если не в процессе наката и не имитируем выполнение слушателем
+    if [ ! "$IN_ROLLING" == true ] && [ "$run_only_visible" == false ] ; then
+      # открываем сеанс работы с базой приложения в терминале 1
+      psql_open A 1
+    fi
+}
+
+
+# Очистка в конце скрипта demo или практики lab,opt
+cleanup() {
+
+    # если не имитируем выполнение практики слушателем
+    if [ "$run_only_visible" == false ]; then
+      # завершаем оставшиеся сессии psql
+      psql_close 1
+    fi
+}
+
+# Очистка в конце скрипта практики app
+cleanup_app() {
+
+    # если не в процессе наката и не имитируем выполнение слушателем
+    if [ ! "$IN_ROLLING" == true ] && [ "$run_only_visible" == false ] ; then
+      # закрываем сеанс в терминале 1
+      psql_close 1
+    fi
+}
+
+
+# Накат скриптов приложения
+# Ожидается входной параметр - либо номер темы, до которой нужно сделать накат скриптов app, либо ее название (содержащее номер)
+roll_to() {
+
+    local CURR_TOPIC=$(echo $(basename $1) | sed 's/.*\([0-9]\{2\}\).*/\1/;s/^0*//')  # до какой темы накатываем
+    local FIRST_TOPIC=7
+    local LAST_TOPIC=20
+
+    # если имитируем выполнение практики слушателем
+    if [ "$run_only_visible" == true ] ; then
+      # открываем сеанс работы с базой приложения в терминале 1 и выходим
+      psql_open A 1 bookstore
+      return
+    fi
+
+    # уже в процессе наката?
+    if [ "$IN_ROLLING" == true ] ; then
+      # открываем сеанс работы с базой приложения в терминале 1 и выходим
+      psql_open A 1 bookstore
+      return
+    else
+      # выставляем флаг и продолжаем
+      export IN_ROLLING=true
+    fi
+
+    if [ $CURR_TOPIC -ge $FIRST_TOPIC ] && [ $CURR_TOPIC -le $LAST_TOPIC ] ; then
+
+      for (( i=$FIRST_TOPIC; i<$CURR_TOPIC; i++ )); do  # последовательный вызов скриптов <COURSE>_<TOPIC>_*_app.sh
+            find ~/${COURSE,,}/labs -type l -name ${COURSE,,}_$(printf "%02d" $i)_*_app.sh -exec readlink {} \; | xargs printf "%s --mute\n" | bash
+      done
+    fi
+
+    IN_ROLLING=''
+
+    psql_open A 1 bookstore
+}

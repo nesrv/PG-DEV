@@ -1,0 +1,3 @@
+ARCHITECTURE=$(uname -m | sed 's/x86_/amd/' | sed 's/aarch/arm/')
+MAJOR=16
+OVERLAY_DIRS='/var/lib/postgresql /etc/postgresql'

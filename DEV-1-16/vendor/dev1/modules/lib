@@ -1,0 +1,1155 @@
+#!/bin/bash
+
+export PSQL_PROMPT='<undef>'
+export PAUSE_PROMPT='<undef>'
+export PAUSE_PROMPT_HTML='<undef>'
+export WIDTH=90
+# нужен для named pipes в psql_open и psql_close
+export TMP=$(dirname $(mktemp -u))
+# имя базы для темы
+export TOPIC_DB=$(echo "$(basename $(readlink -f $0))" | sed -r 's/(_app|_lab|_opt)?\.sh//')
+
+source `pwd`/../params
+
+interactive=true
+format=txt
+onair=false
+tolerate_lostconn=false
+run_only_visible=false
+
+for var in "$@"
+do
+	case "$var" in
+		--non-interactive)
+			interactive=false
+			;;
+		--html)
+			format=html
+			;;
+		--only-visible)
+			run_only_visible=true
+			;;
+		--mute)
+			interactive=false
+			format=none
+			;;
+		*)
+			echo "Unknown option: $var"
+			exit 1
+			;;
+	esac
+done
+
+# call shell function if it exists
+# $1 - function name
+# $2, $3, ... - parameters
+call_if_exists() {
+	type $1 &>/dev/null && $1
+}
+
+#stack_trace [skip-lines]
+stack_trace() {
+  local frame=${1:-0}
+  while caller $frame; do
+    ((frame++));
+  done
+}
+
+#stack_trace_last
+stack_trace_last() {
+  local frame=0
+  while caller $frame; do
+    ((frame++));
+  done >/dev/null
+  caller $(($frame-1))
+}
+
+# report_error text
+# append text to ERRFILE
+report_error() {
+	if [ ! -z "$ERRFILE" ]; then
+		echo $'\n'$(stack_trace_last)$'\n'$1 >> $ERRFILE
+	fi
+}
+
+separator() {
+    if [ "$format" == "txt" ]; then
+		if [ "$prev_cmd" == "ul" ] && [ "$1" == "ul" ]; then
+			: # между ul не нужен пропуск
+		else
+			echo_
+		fi
+	elif [ "$format" == "html" ]; then
+		if [ "$prev_cmd$prev_lvl" != "$1$2" ] || [ "$prev_cmd" = "comment" ]; then
+			case "$prev_cmd" in
+				comment)
+					echo_ "</p>"
+					;;
+				ul)
+					echo_ "</ul>"
+					;;
+				header)
+					echo_ "</h1>"
+					;;
+				exec)
+					echo_ "</div>"
+					;;
+				sql)
+					echo_ "</div>"
+					;;
+				result)
+					echo_ "</pre></div>"
+					;;
+			esac
+			case "$1" in
+				comment)
+					echo_ "<p class=\"C\">"
+					;;
+				ul)
+					echo_ "<ul class=\"U\">"
+					;;
+				header)
+					echo_ "<h1>"
+					;;
+				exec)
+					echo_ "<div class=\"E$2\">"
+					;;
+				sql)
+					echo_ "<div class=\"S$2\">"
+					;;
+				result)
+					echo_ "<div class=\"R$2\"><pre class=\"R$2\">"
+					;;
+			esac
+		fi
+	fi
+	prev_cmd=$1
+	prev_lvl=$2
+}
+
+pause() {
+	if [ "$interactive" == true ] ; then
+		read -rsp $PAUSE_PROMPT
+		echo_
+	elif [ "$format" == txt ] ; then
+		echo_ $PAUSE_PROMPT
+	elif [ "$format" == html ] ; then
+		echo_ $PAUSE_PROMPT_HTML
+	fi
+}
+
+pause_return() {
+	if [ "$interactive" == true ] ; then
+		l=$(( ${#1} + 2 ))
+		p=`echo $PAUSE_RETURN_PROMPT | sed 's/^.\{'$l'\}//'`
+		read -rsp "($1)$p"
+		echo_
+	elif [ "$format" == txt ] ; then
+		echo_ $PAUSE_RETURN_PROMPT
+	elif [ "$format" == html ] ; then
+		echo "<!-- end -->"
+		echo "<!-- $1 -->"
+	fi
+}
+
+# Ожидание нажатия ENTER
+p() {
+	separator "pause"
+	pause
+}
+
+# Ожидание нажатия ENTER и переход к презентации
+P() {
+	separator "pause"
+	pause_return $1
+}
+
+# Конец демонстрации, зацикливаемся, выход по Ctrl+C
+demo_end() {
+	if [ "$interactive" == true ] ; then
+		read -rs
+		read -rsp 'Конец демонстрации. Нажмите Ctrl+C для выхода.'
+		while true; do
+			read -rs
+		done
+	fi
+}
+
+# Комментарий
+c() {
+	# Строки форматируются под заданную ширину
+	separator "comment"
+	if [ "$format" == txt ]; then
+		words="$*"
+		declare -i line_length=0
+		for word in ${words}; do
+			if ((line_length==0)); then
+				# это первая строка и в ней ещё ничего не вывели
+				:
+			elif ((line_length+${#word}<(($WIDTH)))); then
+				# если в строке уже что-то вывели, но пробел+слово не вылезут за границу, выводим пробел
+				echon_ " "
+				line_length=$((line_length+1))
+			else
+				# иначе перевод строки
+				echo_
+				line_length=0
+			fi
+			# выводим слово
+			echon_ ${word}
+			line_length=$((line_length+${#word}))
+		done
+		echo_
+		IFS=''
+	elif [ "$format" == html ]; then
+		echo_unformatted $@
+	fi
+}
+
+# Список из буллетов
+ul() {
+	# Здесь все то же, что и в c(), но дополнительно вставляем "буллет"
+	separator "ul"
+	if [ "$format" == txt ]; then
+		unset IFS
+		words="$@"
+		declare -i line_length=0
+		for word in ${words}; do
+			if ((line_length==0)); then
+				# это первая строка и в ней ещё ничего не вывели
+				echon_ "* "
+				line_length=2
+			elif ((line_length+${#word}<(($WIDTH)))); then
+				# если в строке уже что-то вывели, но пробел+слово не вылезут за границу, выводим пробел
+				echon_ " "
+				line_length=$((line_length+1))
+			else
+				# иначе перевод строки и отступ
+				echo_
+				echon_ "  "
+				line_length=2
+			fi
+			# выводим слово
+			echon_ ${word}
+			line_length=$((line_length+${#word}))
+		done
+		echo_
+		IFS=''
+	elif [ "$format" == html ]; then
+		echo_ "<li>"
+		echo_unformatted $@
+		echo_ "</li>"
+	fi
+}
+
+# Заголовок
+h() {
+	separator "header"
+	if [ "$format" == txt ]; then
+		echo_ "${@^^}"
+		echo_ "$@" | sed 's/./~/g'
+	elif [ "$format" == html ]; then
+		echo_unformatted $@
+	fi
+}
+
+# внутренняя функция для передачи команд в psql
+# psql_ <command> <pipe>
+psql_() {
+    # в режиме --only-visible выполняем только видимые команды
+    if [ "$onair" == true ] || [ "$run_only_visible" == false ]; then
+        echo "$1" | eval "cat >&$2"
+    fi
+}
+
+# внутренняя функция для вывода; показывает только то, что просят
+echo_() {
+	if [ "$onair" == true ]; then
+		echo "$@"
+	fi
+}
+
+# внутренняя функция для вывода; показывает только то, что просят, без перевода строки
+echon_() {
+	if [ "$onair" == true ]; then
+		echo -n "$@"
+	fi
+}
+
+echo_slow() {
+	if [ "$interactive" == true ] && [ "$onair" == true ] ; then
+		str=$1
+		for (( i=0; i<${#str}; i++ )); do
+			echo_ -n "${str:$i:1}"
+			if (( $RANDOM % 2 == 0 )); then
+				sleep 0
+			fi
+		done
+	else
+		echo_ -n "$@"
+	fi
+}
+
+# $1 - text to be echoed
+# $2 - highlight syntax
+echo_unformatted() {
+	if [ "$format" == txt ]; then
+		if [ "$2" == "" ] || [ "$run_only_visible" == true ]; then
+			echo_ "$1"
+		else
+			echo_ "$1" | highlight --syntax=$2 --style=bclear --out-format=xterm256
+		fi
+	elif [ "$format" == html ]; then
+		if [ "$2" == "" ]; then
+			echo_ "$1" | busybox fold -s -w$WIDTH | recode ..HTML
+		else
+			echo_ "$1" | highlight --syntax=$2 --style=bclear --inline-css -f
+		fi
+	fi
+}
+
+start_here() {
+	if [ "$format" == "txt" ]; then
+		onair=true
+		if [ "$interactive" == true ]; then
+			for i in {1..10}; do echo; clear; done # чтобы точно уползло за верхний край при запуске через screen
+		fi
+	elif [ "$format" == "html" ]; then
+		separator ""
+		onair=true
+		cat << END
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF8">
+<style>
+p.c    { }
+h1     { font-size: 160%; font-weight: bold; padding-top: 1ex; padding-bottom: 1ex; }
+div.s1 { margin-left: 20px; padding-left: 10px; font-weight: bold; }
+div.s2 { margin-left: 80px; padding-left: 10px; font-weight: bold; }
+div.s3 { margin-left: 140px; padding-left: 10px; font-weight: bold; }
+div.r1 { margin-left: 20px; padding-left: 10px; }
+div.r2 { margin-left: 80px; padding-left: 10px; }
+div.r3 { margin-left: 140px; padding-left: 10px; }
+div.e  { margin-left: 20px; padding-left: 10px; font-weight: bold; <!--color: darkblue;--> }
+div.r  { margin-left: 20px; padding-left: 10px; <!--color: darkblue;--> }
+</style>
+</head>
+<body>
+END
+		echo "<!-- $1 -->"
+	fi
+}
+
+stop_here() {
+	if [ "$format" == "txt" ]; then
+		onair=false
+		if [ "$interactive" == true ]; then
+			echo
+			echo $PAUSE_RETURN_PROMPT
+		fi
+	elif [ "$format" == "html" ]; then
+		separator ""
+		echo "<!-- end -->"
+		cat << END
+</body>
+</html>
+END
+		onair=false
+	fi
+}
+
+print_shell() {
+	if [ "$format" == txt ]; then
+		print_tabs 1
+		echo_ -n "$1\$ "
+		# Команда может занимать несколько строк, каждую из которых надо сдвинуть с помощью print_tabs.
+		# Но расцветку надо сделать заранее, иначе heredoc будет показан неправильно.
+		if [ "$run_only_visible" == false ]; then
+			shell_cmd="`echo "${*:2}" | highlight --syntax=sh --style=bclear --out-format=xterm256`"
+		else
+			shell_cmd="${*:2}"
+		fi
+		first=true
+		while read -r line
+		do
+			if [ $first == false ]; then
+				echo_ ""
+				print_tabs 1
+			fi
+			echo_slow $line
+			first=false
+		done <<< "$shell_cmd"
+		if [ "$interactive" == true ] && [ "$onair" == true ] ; then
+			read -rs
+		fi
+		echo_ ""
+	elif [ "$format" == html ]; then
+		echo_ `echo "$1\$ ${*:2}" | highlight --syntax=sh --style=bclear --inline-css | sed 's/font-[^;]\+;//g' | head -n -3 | tail -n +8`
+	fi
+}
+
+# Выполнение команды $2 от имени пользователя $1, результат можно вывести через highlight ($3 - синтаксис)
+eu() {
+	separator "exec"
+	print_shell "$1" "$2"
+	# Если пытаться выполнить команду как sudo -i bash -c "$2", то съедаются переводы строк,
+	# что делает невозможным использование here-doc. Вместо этого записываем команду в файл
+	# и выполняем его.
+	tmp=`mktemp`
+	echo "$2" > $tmp
+	chmod 777 $tmp
+	RES="$(sudo -i -u $1 $tmp 2>&1)"
+
+	rm $tmp
+	if [ "$RES" != "" ]; then
+		separator "result"
+		print_shell_result $RES $3
+	fi
+}
+
+# Выполнение команды от имени пользователя в фоне
+# BGPID получает номер порожденного процесса
+# BGTMP - временный файл для команды, который потом надо удалить
+eu_runbg() {
+	separator "exec"
+	print_shell "$1" "$2"
+	# см. комментарий в eu()
+	BGTMP=`mktemp`
+	echo "$2" > $BGTMP
+	chmod 777 $BGTMP
+	coproc bgfd { sudo -i -u $1 $BGTMP 2>&1; }
+	export BGPID=$!
+	exec 3>&${bgfd[0]}
+}
+
+# В интерактивном режиме выполнить команду,
+# а в неинтерактивном только сделать вид
+eui() {
+	if [ "$interactive" == true ] ; then
+		eu "$1" "$2" "$3"
+	else
+		eu_fake_p "$1" "$2"
+	fi
+}
+
+# Чтение результатов выполнения команды в фоне
+e_readbg() {
+	IFS= read -d '' -u 3 RES
+	if [ "$RES" != "" ]; then
+		separator "result"
+		print_shell_result $RES $3
+	fi
+	rm $BGTMP
+}
+
+# Выполнение команды $1 с подсветкой вывода через highlight ($2 - синтаксис)
+e() {
+	eu $OSUSER "$1" "$2"
+}
+
+# Вывести как команду, но не выполнять
+e_fake() {
+	eu_fake $OSUSER "$1" "$2"
+}
+eu_fake() {
+	separator "exec"
+	# save
+	was_interactive=$interactive
+	interactive=false
+
+	print_shell "$1" "$2"
+
+	# restore
+	interactive=$was_interactive
+}
+# Почти то же, что eu_fake, но притворяется, что выполняет команду
+e_fake_p() {
+	eu_fake_p $OSUSER $1
+}
+eu_fake_p() {
+	separator "exec"
+	print_shell "$1" "$2"
+}
+
+# В интерактивном режиме выполнить команду,
+# а в неинтерактивном только вывести ее
+ei() {
+	eui $OSUSER "$1" "$2"
+}
+
+# Сохранить данные из stdin в файл и вывести его содержимое с подсветкой синтаксиса
+# fu <user> <file> <syntax>
+fu() {
+	RES=$(sudo -i -u "$1" tee "$2")
+	if [ "$format" == txt ]; then
+		separator "result"
+		echo_ "+---- $2 "
+		RES=$(echo $RES | sed -e 's/^/+ /;')
+		print_shell_result "$RES" "$3"
+		if [ "$interactive" == true ] && [ "$onair" == true ] ; then
+			read -rsp "+----" < /dev/tty
+			separator "result"
+		else
+			echo_ "+----"
+		fi
+	elif [ "$format" == html ]; then
+		separator "result"
+		echo_ "<span>$2</span>"
+		echo_ '<pre style="background-color:#eeeeee;border:1px solid lightgray;margin:2pt 0 0 0;padding:5pt 10pt;white-space:pre-wrap;">'
+		print_shell_result "$RES" "$3"
+		echo_ '</pre>'
+	fi
+}
+# f <file> <syntax>
+f() {
+	fu $OSUSER "$1" "$2"
+}
+
+# Вывести префикс перед командами или их выводом
+# print_tabs <term>
+print_tabs() {
+	if [ "$format" == "txt" ]; then
+		# Если определена TABn, выводим ее содержимое
+		TABS="TABS$1"
+		if [ -n "${!TABS}" ]; then
+			echo_ -n ${!TABS}
+		elif [ "$1" = "0" ]; then
+			# Для 0 не делаем отступ
+			:
+		else
+			# 4 пробела, n-1 палочек и n пробелов
+			local pipes="||||"
+			local spaces="     "
+			echo_ -n "    ${pipes:0:$(($1-1))}${spaces:0:$1}"
+		fi
+	fi
+}
+
+# Прочитать результат команды из терминала и вывести c подсветкой
+# read_result <term> <syntax>
+read_result() {
+	in_num=$(($1*2+3))
+	out_num=$(($1*2+4))
+	line_num=1
+	empty_lines=0
+        if [ "$onair" == false ] && [ "$run_only_visible" == true ]; then
+		return
+	fi
+	separator "result" $1
+	psql_ "\\echo $EOC" $in_num
+	RESULT=""
+	while : ; do
+		read -r -u $out_num line
+		if [ "$line" == "$EOC" ]; then
+			break
+		fi
+		# если пришло три пустых строки, то считаем, что случилась ошибка и останавливаемся
+		# (это бывает, в частности, при отсутствующем или разорванном соединении)
+		if [ -z "$line" ]; then
+			empty_lines=$((empty_lines+1))
+			if [ $empty_lines -ge 3 ]; then
+				if [ "$tolerate_lostconn" == false ]; then
+					report_error "lost connection in term $1"
+				fi
+				break
+			fi
+		else
+			empty_lines=0
+		fi
+		print_tabs $1
+		if [ $line_num -ne 1 ]; then
+			RESULT+=$'\n'
+		fi
+		RESULT+="$line"
+		echo_unformatted "$line" $2
+		line_num=$((line_num+1))
+	done
+}
+
+# Прочитать результат команды из терминала, вызывается из s_bare
+# read_result_bare <term> <suppress-output>
+read_result_bare() {
+	in_num=$(($1*2+3))
+	out_num=$(($1*2+4))
+	line_num=1
+	empty_lines=0
+	psql_ "\\echo $EOC" $in_num
+	RESULT=""
+	while : ; do
+		read -r -u $out_num line
+		if [ "$line" == "$EOC" ]; then
+			break
+		fi
+		# если пришло три пустых строки, то считаем, что случилась ошибка и останавливаемся
+		# (это бывает, в частности, при отсутствующем или разорванном соединении)
+		if [ -z "$line" ]; then
+			empty_lines=$((empty_lines+1))
+			if [ $empty_lines -ge 3 ]; then
+				if [ "$tolerate_lostconn" == false ]; then
+					report_error "lost connection in term $1"
+					return 1
+				fi
+				break
+			fi
+		else
+			empty_lines=0
+			# if not quiet, add line to RESULT and output it
+			if [ "$2" != "true" ]; then
+				if [ $line_num -ne 1 ]; then
+					RESULT+=$'\n'
+				fi
+				RESULT+="$line"
+				echo "$line"
+			fi
+		fi
+		line_num=$((line_num+1))
+	done
+}
+
+print_shell_result() {
+	if [ "$interactive" == true ] && [ "$onair" == true ] && [ "$2" == "" ]; then
+		echo "$1" | less -FX
+	else
+		while read -r line
+		do
+			#print_tabs 1
+			echo_unformatted "$line" $2
+		done <<< "$1"
+	fi
+}
+
+# Устанавливает переменные окружения, взятые из params, для данного сервера ($1)
+export_env() {
+	CT=CONTROL_$1
+	export CONTROL=${!CT}
+	VR=VERSION_$1
+	export VERSION=${!VR}
+	CL=CLUSTER_$1
+	export CLUSTER=${!CL}
+	SR=SERVICE_$1
+	export SERVICE=${!SR}
+	PR=PORT_$1
+	export PORT=${!PR:=5432}
+	LG=LOG_$1
+	export LOG=${!LG}
+	PD=PGDATA_$1
+	export PGDATA=${!PD}
+	BN=BINPATH_$1
+	export BINPATH=${!BN}
+}
+
+# Управление сервером, установленным либо из исходников, либо из пакета.
+# $1 = номер сервера (настройки в params)
+# $2..$N = action + additional params (e.g. stop -m immediate --skip-systemctl-redirect)
+# версии pgctl для конкретных команд
+
+pgctl_start() {
+	export_env $1
+	separator "exec"
+	if [ "$CONTROL" == "pg_ctlcluster" ]; then
+		e "sudo pg_ctlcluster $VERSION $CLUSTER start"
+	elif [ "$CONTROL" == "pg_ctl" ]; then
+		eu postgres "${BINPATH}pg_ctl -w -l $LOG -D $PGDATA start"
+	elif [ "$CONTROL" == "systemctl" ]; then
+		e "sudo systemctl start $SERVICE"
+		wait_server_ready $1
+	else
+		echo "Способы управления: pg_ctlcluster, pg_сtl или systemctl."
+		exit 2
+	fi
+}
+
+pgctl_restart() {
+	export_env $1
+	separator "exec"
+	if [ "$CONTROL" == "pg_ctlcluster" ]; then
+		e "sudo pg_ctlcluster $VERSION $CLUSTER restart"
+	elif [ "$CONTROL" == "pg_ctl" ]; then
+		eu postgres "${BINPATH}pg_ctl -w -l $LOG -D $PGDATA restart"
+	elif [ "$CONTROL" == "systemctl" ]; then
+		e "sudo systemctl restart $SERVICE"
+		wait_server_ready $1
+	else
+		echo "Способы управления: pg_ctlcluster, pg_сtl или systemctl."
+		exit 2
+	fi
+}
+
+pgctl_stop() {
+	export_env $1
+	separator "exec"
+	if [ "$CONTROL" == "pg_ctlcluster" ]; then
+		e "sudo pg_ctlcluster $VERSION $CLUSTER stop"
+	elif [ "$CONTROL" == "pg_ctl" ]; then
+		eu postgres "${BINPATH}pg_ctl -w -D $PGDATA stop"
+	elif [ "$CONTROL" == "systemctl" ]; then
+		e "sudo systemctl stop $SERVICE"
+	else
+		echo "Способы управления: pg_ctlcluster, pg_сtl или systemctl."
+		exit 2
+	fi
+}
+
+pgctl_stop_immediate() {
+	export_env $1
+	separator "exec"
+	if [ "$CONTROL" == "pg_ctlcluster" ]; then
+		e "sudo pg_ctlcluster $VERSION $CLUSTER stop -m immediate --skip-systemctl-redirect"
+	else
+		eu postgres "${BINPATH}pg_ctl -w -D $PGDATA stop -m immediate"
+	fi
+}
+
+pgctl_reload() {
+	export_env $1
+	separator "exec"
+	if [ "$CONTROL" == "pg_ctlcluster" ]; then
+		e "sudo pg_ctlcluster $VERSION $CLUSTER reload"
+	elif [ "$CONTROL" == "pg_ctl" ]; then
+		eu postgres "${BINPATH}pg_ctl -w -D $PGDATA reload"
+	elif [ "$CONTROL" == "systemctl" ]; then
+		e "sudo systemctl reload $SERVICE"
+	else
+		echo "Способы управления: pg_ctlcluster, pg_сtl или systemctl."
+		exit 2
+	fi
+}
+
+pgctl_promote() {
+	export_env $1
+	separator "exec"
+	if [ "$CONTROL" == "pg_ctlcluster" ]; then
+		e "sudo pg_ctlcluster $VERSION $CLUSTER promote"
+	else
+		eu postgres "${BINPATH}pg_ctl -w -D $PGDATA promote"
+	fi
+}
+
+pgctl_status() {
+	export_env $1
+	separator "exec"
+	if [ "$CONTROL" == "pg_ctlcluster" ]; then
+		e "sudo pg_ctlcluster $VERSION $CLUSTER status"
+	elif [ "$CONTROL" == "pg_ctl" ]; then
+		eu postgres "${BINPATH}pg_ctl -w -D $PGDATA status"
+	elif [ "$CONTROL" == "systemctl" ]; then
+		e "sudo systemctl status $SERVICE"
+	else
+		echo "Способы управления: pg_ctlcluster, pg_ctl или systemctl."
+		exit 2
+	fi
+}
+
+kill_postgres() {
+	export_env $1
+	if sudo test -f "$PGDATA/postmaster.pid"
+	then
+		separator "exec"
+		local postmaster=$(sudo head -n 1 $PGDATA/postmaster.pid)
+		local pids=$(echo "$postmaster $(ps -o pid= --ppid $postmaster)" | xargs echo -n)
+		e "sudo head -n 1 $PGDATA/postmaster.pid"
+		e "sudo kill -QUIT ${postmaster}"
+		wait_until "ps -o pid= --pid '${pids}' > /dev/null ; "'echo $?' 1
+	fi
+}
+
+# psql_open <server> <term> [ <arguments> ]
+psql_open() {
+	export_env $1
+	shift 1
+
+	in_num=$(($1*2+3))
+	out_num=$(($1*2+4))
+	# Для разработки удобно держать исходники в файловой системе хоста,
+	# а из ВМ ходить туда через shared folder. Но в этом случае mkfifo
+	# не может создавать named pipes в текущем каталоге,
+	# приходится делать их во временном
+	in_file=`readlink -f ${TMP}/pipe_${1}_in`
+	out_file=`readlink -f ${TMP}/pipe_${1}_out`
+
+	# Параметры через пробел; добавляем порт, если нестандартный
+	local args=${@:2}
+	if [[ "$PORT" != "5432" ]]; then
+		args="-p $PORT $args"
+	fi
+
+	separator "exec"
+	# Путь для красоты не показываем
+	print_shell "$OSUSER" "psql $args"
+
+	# in
+	rm -f $in_file
+	mkfifo $in_file
+	chmod a+rw $in_file
+	# out
+	rm -f $out_file
+	mkfifo $out_file
+	chmod a+rw $out_file
+
+	# Вызываем без пути
+	sudo -i -u $OSUSER bash -c "psql -X -v 'HISTFILE=hist' $args < $in_file > $out_file 2>&1 &"
+	eval "exec $in_num>$in_file"
+	eval "exec $out_num<$out_file"
+	setenv_pid $1
+}
+
+# psql_close <term>
+psql_close() {
+	in_num=$(($1*2+3))
+	out_num=$(($1*2+4))
+	in_file=${TMP}pipe_${1}_in
+	out_file=${TMP}pipe_${1}_out
+
+	separator "sql" $1
+	print_sql "\\q" $1
+
+	echo '\q' | eval "cat >&$in_num"
+	eval "echo -n $in_num>&-"
+	eval "echo -n $out_num>&-"
+	rm -f $in_file
+	rm -f $out_file
+	eval 'unset PID$1'
+}
+
+# Печать запроса psql с расцветкой синтаксиса.
+# Поддерживается вложенный язык:
+#
+#   CREATE FUNCTION f() RETURNS void AS $perl$
+#     код на Perl
+#   $perl$ LANGUAGE plperlu;
+#
+# Текст до первой строки, где если $язык$ (включая ее саму),
+# подсвечивается как pgsql. Текст от второй строки с $язык$
+# (включая ее), тоже подсвечивается как pgsql.
+# Строки внутри долларов подсвечиваются как указанный язык.
+# Вложенность допускается только один раз (нам достаточно).
+#
+# 1: string
+# 2: level
+print_sql() {
+	PP=PSQL_PROMPT$2
+	if [ "${!PP}" != "" ]; then
+		PPROMPT=${!PP}
+	else
+		PPROMPT=$PSQL_PROMPT
+	fi
+
+	if [ "$format" == html ]; then
+		echo_ '<pre style="color:#323232; background-color:#ffffff;">'
+	fi
+
+	line_num=1 # используется в print_sql_part
+
+	# Первая часть pgsql
+	s="$PPROMPT$1"
+	p=`echo $s | sed '/\\$\\(perl\\|python\\|xml\\|js\\|sh\\)\\$/q'`
+	lang=pgsql
+	print_sql_part "$p" $2 $lang
+
+	# Внутренняя часть (если есть)
+	if [[ "$p" =~ \$(perl|python|xml|js|sh)\$ ]]; then
+		lang=${BASH_REMATCH[1]}
+	else
+		lang=pgsql # если не распознаем язык
+	fi
+	s=`echo $s | sed -n '/\\$\\(perl\\|python\\|xml\\|js\\|sh\\)\\$/,$p' | tail -n +2`
+	if [ "$s" != "" ]; then
+		p=`echo $s | sed '/\\$\\(perl\\|python\\|xml\\|js\\|sh\\)\\$/q' | head -n -1`
+		print_sql_part "$p" $2 $lang
+
+		# Окончание pgsql
+		s=`echo $s | sed -n '/\\$\\(perl\\|python\\|xml\\|js\\|sh\\)\\$/,$p'`
+		print_sql_part "$s" $2 pgsql
+	fi
+
+	if [ "$format" == txt ]; then
+		if [ "$interactive" == true ] && [ "$onair" == true ] ; then
+			read -rs
+		fi
+		echo_
+	elif [ "$format" == html ]; then
+		echo_ '</pre>'
+	fi
+}
+
+# 1: string
+# 2: level
+# 3: lang
+print_sql_part() {
+	#echo "----------- $3 -------------"
+	#echo "$1"
+	#echo "-------------------------"
+	if [ "$format" == txt ]; then
+		if [ "$run_only_visible" == false ]; then
+			cmd=`echo "$1" | highlight --syntax="$3" --style=bclear --out-format=xterm256`
+		else
+			cmd="$1"
+		fi
+		while read -r line
+		do
+			if [[ $line_num -ge 2 ]]; then
+				echo_
+			fi
+			print_tabs $2
+			echo_slow "$line"
+			line_num=$((line_num+1))
+		done <<< $cmd
+	elif [ "$format" == html ]; then
+		echo_ `echo "$1" | highlight --syntax="$3" --style=bclear --inline-css -f`
+	fi
+}
+
+# Вывести вывод psql-терминала в отдельной строке
+# r <term> <syntax>
+r() {
+	echo_
+	read_result $1
+}
+
+# Вывести команду psql, выполнить её после нажатия Enter без ожидания результата
+# ss <term> <command>
+ss() {
+	in_num=$(($1*2+3))
+
+	separator "sql" $1
+	print_sql "$2" $1
+
+	psql_ "$2" $in_num
+}
+
+# Вывести команду psql, выполнить её после нажатия Enter и вывести результат с подсветкой
+# s <term> <command> <syntax>
+s() {
+	ss $1 "$2"
+	read_result $1 $3
+	setenv_pid $1 "$2"
+}
+
+# Вывести и сразу выполнить команду psql без ожидания результата
+# ssi <term> <command>
+ssi() {
+	in_num=$(($1*2+3))
+
+	separator "sql" $1
+	save_interactive=$interactive
+	interactive=false
+	print_sql "$2" $1
+	interactive=$save_interactive
+
+	psql_ "$2" $in_num
+}
+
+# Вывести и сразу выполнить команду psql, вывести результат с подсветкой
+# si <term> <command> <syntax>
+si() {
+	ssi $1 "$2"
+	read_result $1 $3
+	setenv_pid $1 "$2"
+}
+
+# no align, no header - для получения "голого" результата
+# не вставляет никакие разделители
+s_bare() {
+	in_num=$(($1*2+3))
+
+	psql_ "\t \a" $in_num
+    read_result_bare $1 true
+
+	psql_ "$2" $in_num
+    read_result_bare $1 false
+    status=$?
+
+	psql_ "\t \a" $in_num
+    read_result_bare $1 true
+	setenv_pid $1 "$2"
+
+	return $status
+}
+
+# Вывести как SQL-команду, но не выполнять
+s_fake() {
+	separator "sql" $1
+	# save
+	was_interactive=$interactive
+	interactive=false
+	was_prompt=$PSQL_PROMPT
+	PSQL_PROMPT=''
+	PP=PSQL_PROMPT$1
+	was_prompt1=${!PP}
+	eval "PSQL_PROMPT$1"=''
+
+	print_sql "$2" $1
+
+	# restore
+	PSQL_PROMPT=$was_prompt
+	eval "PSQL_PROMPT$1"='$was_prompt1'
+	interactive=$was_interactive
+}
+
+# Выполнить команду psql, не выводя её, и вывести результат с подсветкой
+# r_only <term> <command> <syntax>
+r_only() {
+	in_num=$(($1*2+3))
+
+	psql_ "$2" $in_num
+	read_result $1 $3
+	setenv_pid $1 "$2"
+}
+
+# вывести результат, который подсунут на вход, с подсветкой
+# r_fake <term> <result> <syntax>
+r_fake() {
+        in_num=$(($1*2+3))
+        out_num=$(($1*2+4))
+        line_num=1
+        empty_lines=0
+        separator "result" $1
+
+        while IFS= read -r line
+        do
+                if [ "$line" == "$EOC" ]; then
+                        break
+                fi
+                print_tabs $1
+                echo_unformatted "$line" $3
+        done < <(printf '%s\n' "$2")
+}
+
+# setenv_pid <term> [<command>]
+# set PIDn var
+setenv_pid() {
+	# Если команду не передали, либо это была \c или \connect, обновить PIDn
+	if [[ $2 = "" ||  $2 =~ ^\\c(onnect)?[[:blank:]] ]]
+	then
+		old_run_only_visible=$run_only_visible
+		run_only_visible=false
+		eval 'export PID$1=`s_bare $1 "SELECT pg_backend_pid();"`'
+		run_only_visible=$old_run_only_visible
+	fi
+}
+
+# ждём, пока команда вернёт нужное значение
+# wait_until <command> <value> [<timeout-secs>]
+wait_until() {
+	pollint=0.5      # polling interval, secs
+	timeout=${3:-20} # timeout, secs
+	started=`date +%s`
+	while : ; do
+		if [ $((`date +%s`-started)) -ge $timeout ]; then
+			report_error "timeout waiting for $1"
+			break
+		fi
+		retval=$(eval $1)
+		retcode=$?
+		#echo retcode:$retcode target:$2 retval:$retval
+		[ $retcode -eq 0 ] || break
+		[ "$retval" != "$2" ] || break
+		sleep $pollint
+	done
+}
+
+# wait_status <command> <status> [<timeout-secs>]
+# ждём, когда команда вернёт нужный статус
+wait_status(){
+	wait_until $1' ; echo $?' $2 $3
+}
+
+# wait_server_ready <cluster>
+# ждём, когда сервер будет готов принимать запросы
+wait_server_ready(){
+	export_env $1
+	wait_status "${BINPATH}pg_isready -qp ${PORT}" 0
+}
+
+# wait_sql <term> <sql> [<timeout-secs>]
+# ждём, когда sql вернёт true
+wait_sql(){
+	wait_until "s_bare $1 \"$2\"" t $3
+}
+
+# wait_db <term> <dbname> [<timeout-secs>]
+# ждём, пока отработает create database
+wait_db(){
+	wait_sql $1 "SELECT count(*)=1 FROM pg_database WHERE datname = '$2';" $3
+}
+
+# wait_replica_sync <term> <cluster> [<timeout-secs>]
+# ждём синхронизации с репликой
+wait_replica_sync(){
+	if [ "$CONTROL" == "pg_ctlcluster" ]; then
+		local vr=VERSION_$2
+		local cl=CLUSTER_$2
+		local app=${!vr}/${!cl}
+		local lsn=$(s_bare $1 "SELECT pg_current_wal_insert_lsn() FROM pg_stat_replication WHERE application_name = '$app';")
+		wait_sql $1 "SELECT replay_lsn >= '$lsn'::pg_lsn FROM pg_stat_replication WHERE application_name = '$app';" $3
+	else
+		echo "wait_replica_sync is not implemented for pg_ctl control"
+		exit 1
+	fi
+}
+
+# wait_param <term> <par-name> <par-value> [<timeout-secs>]
+# ждём, когда параметр получит заданное значение
+wait_param(){
+	wait_sql $1 "SELECT current_setting('$2')='$3';" $4
+}
+
+# non-interactive sleep
+sleep-ni() {
+	if [ "$interactive" == false ] ; then
+		sleep $1
+	fi
+}
+
+# require-ram <min-ram-in-gbytes>
+require-ram(){
+	let ram=$(free --giga | grep -oP '\d+' | head -n 1)
+	if (( ${ram} < $1 ))
+	then
+		echo Размер ОЗУ ${ram} ГБ, нужно не менее $1 ГБ
+		exit 1
+	fi
+}
+
+# open-file <file-or-url> <suppress-errors>
+# в интерактивном режиме открыть файл или URL в программе, ассоциированной с ним в графической оболочке ОС
+# подавить сообщения об ошибках, если suppress-errors=true
+open-file(){
+	c "Открываем файл $1..."
+	e_fake_p "xdg-open $1"
+	if [ "$interactive" == true ] ; then
+		if [ "$2" == true ] ; then
+			xdg-open "$1" 2>/dev/null
+		else
+			xdg-open "$1"
+		fi
+	fi
+}
+
+prev_cmd=''
+prev_lvl=''
+
+if [ "$EOC" == "" ]; then
+	export EOC='--- end of command ---'
+fi
+if [ "$PSQL_PROMPT" == "<undef>" ]; then
+	export PSQL_PROMPT='=# '
+fi
+if [ "$PAUSE_PROMPT" == "<undef>" ]; then
+	export PAUSE_PROMPT="Press enter to continue..."
+fi
+if [ "$PAUSE_PROMPT_HTML" == "<undef>" ]; then
+	export PAUSE_PROMPT_HTML='<hr size=0 style="border-top: 1px dashed grey; border-bottom: 0;"/>'
+fi
+
+if [ "$interactive" == true ] ; then
+	tabs -4
+fi
+
+IFS=''
+
+## TODO: Пока решили не делать, при случае нужно раскомментировать строчку
+## и убрать из скриптов init
+# Выполнить стандартную инициализацию
+# Функцию init надо задавать в файле params
+#call_if_exists init

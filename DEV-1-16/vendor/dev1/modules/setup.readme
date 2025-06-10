@@ -1,0 +1,123 @@
+0.  Используем
+(amd64) - virtualbox 7.0
+    echo "deb [arch=amd64] http://download.virtualbox.org/virtualbox/debian $(lsb_release -sc) contrib" | sudo tee /etc/apt/sources.list.d/virtualbox.list
+    wget -q https://www.virtualbox.org/download/oracle_vbox_2016.asc -O- | sudo apt-key add -
+    sudo apt update
+    sudo apt install virtualbox-7.0
+    # Установить расширение (File - Preferences - Extensions), соответствующее версии virtualbox, например:
+    https://download.virtualbox.org/virtualbox/7.0.8/Oracle_VM_VirtualBox_Extension_Pack-7.0.8.vbox-extpack
+(arm64) - UTM
+    https://github.com/utmapp/UTM/releases/latest/download/UTM.dmg
+
+1.1 Делаем чистую виртуалку
+(amd64) Xubuntu 22.04 64-bit (https://xubuntu.org/release/22-04/)
+    Пользователь: student/student
+(arm64) Ubuntu Desktop 22.04 64-bit
+	Ubuntu Desktop daily live 22.04 for arm (https://cdimage.ubuntu.com/jammy/daily-live/current/jammy-desktop-arm64.iso)
+	Запускаем UTM
+	File - New - Virtualize - Linux - Browse (choose downloaded iso image) - Continue
+	Memory: 2048MB, CPU Cores: default - Continue
+	Storage: 20GB  - Continue - Continue - Save
+	Run the VM
+	Install Ubuntu 22.04... Minimal installation...
+	computer: course
+	username: student
+	password: student
+	login automatically
+	(в конце приходится останавливать принудительно)
+
+1.2 Настройки (остановить ВМ):
+(amd64)
+    - USB 1.1 (иначе не будет работать у тех, кто не поставил расширение)
+	USB - Enable USB Controller - USB 1.1
+	- Видеопамять (иначе при увеличении окна чернеет и виснет)
+	Display - Screen - Video Memory: 128 MB
+	- Буфер обмена
+	Devices - Shared Clipboard - Bidirectional
+	- Увеличить диск
+	Tools - Xubuntu...vdi - Size: 20 GB
+(arm64)
+	Drives - USB Drive - Delete
+
+1.3 Удобства в гостевой ОС
+(amd64)
+    - VirtualBox Guest Additions
+	Devices - Insert Guest Additions CD Image ...
+	sudo apt install -y gcc make perl
+	cd /media/student/VBox_GAs_7.0.8 # версия
+	sudo ./VBoxLinuxAdditions.run
+(arm64)
+    sudo apt update
+	Вариант 1
+		# пакеты, которых нет в минимальном сервере
+		sudo apt install -y dialog apt-utils
+		# буфер обмена, динамическое разрешение экрана
+		sudo apt install -y spice-vdagent
+	Вариант 2
+		sudo apt remove gnome-*
+		#sudo apt remove gnome-power-manager gnome-screensaver gnome-terminal* gnome-bluetooth* gnome-desktop* gnome-session* gnome-user* gnome-shell-common gnome-control-center gnome-screenshot
+		sudo apt remove nautilus unity*
+		#compiz compiz* unity unity* hud zeitgeist zeitgeist* python-zeitgeist libzeitgeist* activity-log-manager-common overlay-scrollba*
+		#sudo apt-get install xubuntu-community-wallpapers
+		sudo apt autoremove
+	# графическая оболочка
+	sudo apt install -y xubuntu-desktop #choose lightdm display manager
+	echo 'autologin-user=student' | sudo tee -a /usr/share/lightdm/lightdm.conf.d/60-xubuntu.conf
+	reboot
+
+1.4 Отключаем обновления
+	Settings - Software & Updates - Updates
+	Automatically check for updates: Never
+	Notify me of a new Ubuntu version: Never
+
+1.5 Кое-какие настройки системы:
+    - Capslock для переключения языков (Settings - Keyboard - Layout)
+    - Индикатор языка 
+		sudo apt install -y xfce4-xkb-plugin
+		Settings - Panel - Items - Add - Keyboard Layouts
+		Show layout as = system, Layout name = language
+    - Terminal Emulator на рабочий стол
+      Scrollback 10000, Font size 12, Colors: black on white
+    - Отключаем блокировку экрана
+      Settings - Power Manager - System - Lock screen... = off
+      Settings - Power Manager - Display - Display power management = off
+    - Settings - Screensaver:
+      Activate screensaver when computer is idle = off
+      Enable screensaver = off
+      Enable lock screen = off
+
+------> Xubuntu 22.04 64-bit clean
+
+2.1.
+	Ставим git и клонируем репозиторий modules:
+	cd
+	sudo apt update
+	sudo apt install -y git
+	git clone https://pubgit.postgrespro.ru/edu/modules.git --branch=16
+или
+	Добавляем общую папку: путь к modules
+	mkdir ~/modules
+	sudo mount -t vboxsf modules ~/modules
+ 
+2.3. Запускаем общий скрипт
+(amd64) - отключиться от корпоративного VPN, иначе не получится скачать доку с repo.postgrespro.ru
+(arm64) - не обязательно
+	~/modules/setup.sh
+
+2.4. Удаляем точку монтирования или репозиторий
+	mountpoint -q ~/modules && (sudo umount ~/modules;rm -r ~/modules) || rm -rf ~/modules
+
+2.5. Компактизация
+
+(amd64)
+	sudo systemctl rescue
+
+	echo s >/proc/sysrq-trigger
+	echo u >/proc/sysrq-trigger
+	zerofree -v /dev/sda3
+	poweroff
+(arm64)
+	poweroff
+	Edit - VirtIO Drive - Compress
+
+------> Course-16

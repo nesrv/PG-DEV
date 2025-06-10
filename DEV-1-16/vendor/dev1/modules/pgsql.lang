@@ -1,0 +1,168 @@
+-- Language definition base on sql.lang
+
+Description="PostgreSQL (SQL + PL/pgSQL + psql)"
+
+Keywords={
+  { Id=1,
+    List={"ABORT", "ABSOLUTE", "ACCESS", "ACTION", "ADD", "ADMIN", "AFTER", "AGGREGATE",
+	"ALL", "ALSO", "ALTER", "ALWAYS", "ANALYSE", "ANALYZE", "AND", "ANY", "ARRAY",
+	"AS", "ASC", "ASSERTION", "ASSIGNMENT", "ASYMMETRIC", "AT", "ATOMIC", "ATTRIBUTE",
+	"AUTHORIZATION", "BACKWARD", "BEFORE", "BEGIN", "BETWEEN", "BOTH", "BY",
+	"CACHE", "CALL", "CALLED", "CASCADE", "CASCADED", "CASE", "CAST", "CATALOG", "CHAIN",
+	"CHARACTERISTICS", "CHECK", "CHECKPOINT", "CLASS", "CLOSE", "CLUSTER", "COALESCE",
+	"COLLATE", "COLLATION", "COLUMN", "COMMENTS", "COMMIT", "COMMITTED", "COMPRESSION",
+	"CONCURRENTLY", "CONFIGURATION", "CONFLICT", "CONNECT", "CONNECTION", "CONSTRAINT",
+	"CONSTRAINTS", "CONTENT", "CONTINUE", "CONVERSION", "COPY", "COST", "CREATE",
+	"CROSS", "CSV", "CUBE", "CURRENT", "CURRENT_CATALOG", "CURRENT_DATE",
+	"CURRENT_ROLE", "CURRENT_SCHEMA", "CURRENT_TIME", "CURRENT_TIMESTAMP", "CURRENT_USER",
+	"CURSOR", "CYCLE", "DATA", "DATABASE", "DAY", "DEALLOCATE", "DECLARE",
+	"DEFAULT", "DEFAULTS", "DEFERRABLE", "DEFERRED", "DEFINER", "DELETE", "DELIMITER",
+	"DELIMITERS", "DEPENDS", "DESC", "DICTIONARY", "DISABLE", "DISCARD", "DISTINCT",
+	"DO", "DOCUMENT", "DOMAIN", "DROP", "EACH", "ELSE", "ENABLE", "ENCODING", "ENCRYPTED",
+	"END", "ENUM", "ESCAPE", "EVENT", "EXCEPT", "EXCLUDE", "EXCLUDED", "EXCLUDING", "EXCLUSIVE",
+	"EXECUTE", "EXISTS", "EXPLAIN", "EXPRESSION", "EXTENDED", "EXTENSION", "EXTERNAL", "FALSE",
+	"FAMILY", "FETCH", "FILTER", "FIRST", "FOLLOWING", "FOR", "FORCE", "FOREIGN",
+	"FORMAT", "FORWARD", "FREEZE", "FROM", "FULL", "FUNCTION", "FUNCTIONS", "GENERATED",
+        "GLOBAL", "GRANT",
+	"GRANTED", "GREATEST", "GROUP", "GROUPING", "HANDLER", "HAVING", "HEADER", "HOLD",
+	"HOUR", "ICU_LOCALE", "IDENTITY", "IF", "ILIKE", "IMMEDIATE", "IMMUTABLE", "IMPLICIT", "IMPORT",
+	"IN", "INCLUDE", "INCLUDING", "INCREMENT", "INDENT", "INDEX", "INDEXES", "INHERIT", "INHERITS", "INITIALLY",
+	"INLINE", "INNER", "INOUT", "INPUT", "INSENSITIVE", "INSERT", "INSTEAD", "INTERSECT",
+	"INTO", "INVOKER", "IS", "ISNULL", "ISOLATION", "JOIN", "KEY", "LABEL",
+	"LANGUAGE", "LARGE", "LAST", "LATERAL",
+        "LC_COLLATE", "LC_CTYPE",
+        "LEADING", "LEAKPROOF", "LEAST", "LEFT",
+	"LEVEL", "LIKE", "LIMIT", "LISTEN", "LOAD", "LOCAL", "LOCALTIME", "LOCALTIMESTAMP",
+	"LOCALE","LOCALE_PROVIDER","LOCATION", "LOCK", "LOCKED", "LOGGED", "MAIN",
+	"MAPPING", "MATCH", "MATERIALIZED",
+	"MAXVALUE", "METHOD", "MERGE", "MINUTE", "MINVALUE", "MODE", "MONTH", "MOVE", --"NAME",
+	"NAMES", "NATIONAL", "NATURAL", "NEXT", "NO", "NONE", "NOT", "NOTHING", "NOTIFY",
+	"NOTNULL", "NOWAIT", "NULL", "NULLIF", "OBJECT", "OF", "OFF", "OFFSET",
+	"OIDS", "ON", "ONLY", "OPERATOR", "OPTION", "OPTIONS", "OR", "ORDER", "ORDINALITY",
+	"OUT", "OUTER", "OVER", "OVERLAPS", "OVERLAY", "OWNED", "OWNER", "PARALLEL", "PARSER",
+	"PARTIAL", "PARTITION", "PASSING", "PASSWORD", "PLACING", "PLANS", "POLICY", "POSITION",
+	"PRECEDING", "PREPARE", "PREPARED", "PRESERVE", "PRIMARY", "PRIOR", "PRIVILEGES",
+	"PROCEDURAL", "PROCEDURE", "PROGRAM", "QUOTE", "RANGE", "READ", "REASSIGN",
+	"RECHECK", "RECURSIVE", "REF", "REFERENCES", "REFERENCING", "REFRESH", "REINDEX", "RELATIVE",
+	"RELEASE", "RENAME", "REPEATABLE", "REPLACE", "REPLICA", "RESET", "RESTART", "RESTRICT", "RESTRICTED", "RESTRICTIVE",
+	"RETURNING", "RETURNS", "REVOKE", "RIGHT", "ROLE", "ROLLBACK", "ROLLUP", "ROUTINE", "ROUTINES", "ROW", "ROWS",
+	"RULE", "SAFE", "SAVEPOINT", "SCHEMA", "SCROLL", "SEARCH", "SECOND", "SECURITY", "SELECT",
+	"SEQUENCE", "SEQUENCES", "SERIALIZABLE", "SERVER", "SESSION", "SESSION_USER", "SET",
+	"SETOF", "SETS", "SHARE", "SHOW", "SIMILAR", "SIMPLE", "SKIP", "SNAPSHOT", "SOME",
+	"STABLE", "STANDALONE", "START", "STATEMENT", "STATISTICS", "STDIN", "STDOUT",
+	"STORAGE", "STORED",
+        "STRICT", "STRIP", "SUBSTRING", "SYMMETRIC", "SYSID", "SYSTEM", "TABLE",
+	"TABLES", "TABLESAMPLE", "TABLESPACE", "TEMP", "TEMPLATE", "TEMPORARY", "THEN", "TIME", "TO",
+	"TRAILING", "TRANSACTION", "TRANSFORM", "TREAT", "TRIGGER", "TRIM", "TRUE", "TRUNCATE",
+	"TRUSTED", "TYPE", "TYPES", "UNBOUNDED", "UNCOMMITTED", "UNENCRYPTED", "UNSAFE", "UNION", "UNIQUE",
+	"UNKNOWN", "UNLISTEN", "UNLOGGED", "UNTIL", "UPDATE", "USAGE", "USER", "USING", "VACUUM", "VALID",
+	"VALIDATE", "VALIDATOR", "VALUE", "VALUES", "VARIADIC", "VERBOSE", "VIEW",
+	"VIEWS", "VOLATILE", "WHEN", "WHERE", "WHITESPACE", "WINDOW", "WITH", "WITHIN", "WITHOUT",
+	"WORK", "WRAPPER", "WRITE", "YEAR", "YES", "ZONE",
+        "PATH", "COLUMNS",
+        "PUBLICATION", "SUBSCRIPTION",
+        "TEXT", "NULLS", "VERSION", "LEFTARG", "RIGHTARG", "COMMENT", "SQL",
+        -- role attributes
+        "LOGIN", "NOLOGIN", "CREATEDB", "NOCREATEDB", "BYPASSRLS", "NOBYPASSRLS",
+        "SUPERUSER", "NOSUPERUSER", "CREATEROLE", "NOCREATEROLE", "NOINHERIT",
+        "REPLICATION", "NOREPLICATION", 
+        -- PL/pgSQL
+        "RAISE", "NOTICE", "ERROR", "EXCEPTION", "DEBUG", "INFO", "WARNING", "LOG",
+        "RETURN", "QUERY", "PERFORM", "ALIAS", "GET", "DIAGNOSTICS", "LOOP", "ELSIF", 
+        "EXIT", "WHILE", "FOREACH",
+        "REVERSE", "SLICE", "STACKED", "ASSERT", "OPEN", "FOUND",
+        "SQLSTATE", "SQLERRM", "NEW", "OLD", "CONSTANT",
+	-- enterprise
+	"AUTONOMOUS",
+        -- bouncer
+        "POOLS", "PAUSE", "RESUME", "CLIENTS", "SERVERS", "CONFIG"
+        },
+    Regex={
+        -- PL/pgSQL
+        [[(?<!\.)log]], -- prevent highlighting "filename.log"
+        [[(?<!\.)sql]], -- prevent highlighting "filename.sql"
+    },
+  },
+  { Id=2,
+    List={"bigint", "bigserial", "binary", "bit", "boolean", "char", "character", "date", "dec", "decimal",
+	"double", "precision", -- "double precision" doesn't work
+        "float", "int", "integer", "nchar", "numeric", "real", 
+        "serial", "smallint",
+        "timetz", "time", "timestamptz", "timestamp", "varchar", "varying character",
+        "with time zone", "without time zone",
+--        "xml",
+        "json", "jsonb",
+        "int4range", "int8range", "numrange", "tsrange", "tstzrange", "daterange",
+        "point",
+        --"line", // conflicts with example in demo/sql_row.sh
+        "lseg", "box", "path", "polygon", "circle",
+        "bytea", "lo",
+        "interval" ,
+        -- pseudotypes
+        "any", "anyelement", "anyarray", "anynonarray", "anyenum", "anyrange",
+        "cstring", "internal", "language_handler", "fdw_handler", "index_am_handler",
+        "tsm_handler", "record", "event_trigger", "pg_ddl_command", "void", "opaque",
+        "refcursor", "trigger",
+        -- exception names
+        "no_data_found", "too_many_rows", "division_by_zero", "unique_violation",
+        "others", "plpgsql_error", "not_null_violation", "invalid_text_representation",
+	"lock_not_available",
+--        "row_count", "result_old", "pg_context", "returned_sqlstate", "column_name", "constraint_name",
+--        "pg_datatype_name", "message_text", "table_name", "schema_name", "pg_exception_detail",
+--        "pg_exception_hint", "pg_exception_context",
+--        "message", "detail", "hint", "errcode"
+        -- sytem columns
+        "oid", "tableoid", "xmin", "cmin", "xmax", "cmax", "ctid"
+  },
+  },
+  { Id=1,
+    Regex=[[TG_[A-Z_]+]],
+  },
+  { Id=2,
+    Regex=[[(\btext\b|\b(?<!\$)xml\b)]], -- datatypes
+  },
+  { Id=2,
+    Regex=[[\:\:(\w+)]],
+  },
+  { Id=2,
+    Regex=[[%TYPE|%ROWTYPE]],
+  },
+  { Id=3, -- bind & psql variables (such as ':bind', '$1'); psql metacommands ('\dt'); labels; t/f
+    Regex=[[(?<![:0-9])\:\w+|(?<!:)\:'\w+'|\$\d(?=\D)|\\[\w!?]+\+?|<<[a-zA-Z0-9_]+>>|true|false]],
+  },
+  { Id=4, -- functions
+    Regex=[[(\w+)\s*\(]],
+  },
+  { Id=4, -- functions
+    Regex=[[\bcurrent_(?:user|role|catalog|date|timestamp|time)\b|\buser\b|\bsession_user\b]],
+  },
+}
+
+Strings={
+-- intentionally interpret $$-strings as code
+  DelimiterPairs= {
+    { Open=[[E']], Close=[[']] },
+  },
+  Delimiter=[["|']],
+  Escape=[[\\\w]],
+}
+
+IgnoreCase=false
+
+Comments={
+  { Block=false,
+    Delimiter= { [[\-\-]] },
+  },
+  { Block=true,
+    Nested=false,
+    Delimiter= { [[\/\*]],[[\*\/]],}
+  }
+}
+
+Operators=[[\(|\)|\[|\]|\{|\}|\,|\;|\:|\&|<|>|\!|\=|\/|\*|\%|\+|\-]]
+
+-- https://gitlab.com/saalen/highlight/-/blob/master/README_REGEX.adoc
+
+--        (sign)(significand---------------)(decimal-power------)
+--                 (integer) (decimal-----)        (power-----)
+Digits=[[ [\+-]?(?:[\d_]+\.?|[\d_]*\.[\d_]+)(?:[eE][\+-]?[\d_]+)? ]]

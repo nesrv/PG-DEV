@@ -1,0 +1,64 @@
+0.  Используем virtualbox >=6.1
+
+------> Course-16
+
+1. Репозиторий курса
+Вариант a: Импортируем Course-16, переименовываем в "курс-версия-dev" и клонируем репозиторий
+
+	course=... # нижний регистр
+	git clone https://pubgit.postgrespro.ru/edu/$course.git --recurse-submodules --branch=$MAJOR
+	cd $course/modules
+	git checkout $MAJOR
+	cd
+
+Вариант b: Настраиваем доступ из ВМ к репозиторию на хосте
+
+	Импортируем Course-16
+
+	На хосте в каталоге репозитория курса:
+	modules/vm_init.sh
+
+	В виртуалке:
+	course=... # нижний регистр
+	mkdir ~/$course ; sudo mount -t vboxsf $course ~/$course
+
+2. Запускаем настроечный скрипт
+
+	~/$course/${course}_setup.sh
+
+3. Выполняем ручную настройку, если требуется
+
+	cat ~/$course/${course}_setup.readme
+
+4. Удаляем репозиторий или точку монтирования
+
+	mountpoint -q ~/$course && (sudo umount ~/$course;rm -r ~/$course) || rm -rf ~/$course
+
+5. Чистим историю команд
+
+	cat /dev/null > ~/.bash_history ; history -c
+
+6. Компактизация (только для amd64), дает выигрыш по размеру ova-файла раза в полтора.
+
+	 sudo systemctl rescue                # входим в режим восстановления (пробел перед командой не сохранит её в истории)
+	dd if=/dev/zero of=wipefile bs=1M     # создает файл на свободном месте, забивая его нулями
+	                                      # (завершается ошибкой No space left on device - это нормально)
+	rm wipefile                           # удаляем файл с нулями
+	poweroff                              # выключаем
+
+7. Экспорт виртуальной машины
+
+(amd64)
+	./modules/vm_export.sh
+
+(arm64)
+	UTM - выбрать ВМ - Share... - КУРС-ВЕРСИЯ-yyyymmdd, Documents - Save
+	Finder - Documents - Compress "КУРС-ВЕРСИЯ-yyyymmdd.utm"
+
+8. Копируем в файлохранилище (файлы будут видны в https://edu.postgrespro.ru/ВЕРСИЯ).
+(amd64)
+	edu.postgrespro.ru/www/ВЕРСИЯ/КУРС-ВЕРСИЯ-yyyymmdd.ova
+	edu.postgrespro.ru/www/ВЕРСИЯ/КУРС-ВЕРСИЯ.ova
+(arm64)
+	edu.postgrespro.ru/www/ВЕРСИЯ/КУРС-ВЕРСИЯ-yyyymmdd.utm.zip
+	edu.postgrespro.ru/www/ВЕРСИЯ/КУРС-ВЕРСИЯ.utm.zip

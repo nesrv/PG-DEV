@@ -1,0 +1,93 @@
+-- pg_waldump output
+
+Description="pg_waldump output"
+
+Keywords={
+  -- field titles
+  { Id=1,
+    List={
+          "len","rmgr","tx","lsn","desc"
+    },
+  },
+  { Id=1,
+    Regex=[[\(rec/tot\)]]
+  },
+  -- columns in --stats mode
+  { Id=1,
+    List={
+      "size", "Combined", "Record", "Type", "N", "Total"
+    },
+  },
+  -- resource managers
+  { Id=2,
+    List={
+      "XLOG",
+      "Transaction",
+      "Storage",
+      "CLOG",
+      "Database",
+      "Tablespace",
+      "MultiXact",
+      "RelMap",
+      "Standby",
+      "Heap2",
+      "Heap",
+      "Btree",
+      "Hash",
+      "Gin",
+      "Gist",
+      "Sequence",
+      "SPGist",
+      "BRIN",
+      "CommitTs",
+      "ReplicationOrigin",
+      "Generic",
+      "LogicalMessage"
+    }
+  },
+  -- record descriptions
+  { Id=2,
+    List={
+      "CREATE",
+      "CREATE_FILE_COPY",
+      "LOCK","UPDATE","HOT_UPDATE","INSERT","DELETE","INPLACE","MULTI_INSERT",
+      "NEWROOT","INSERT_LEAF","DEDUP",
+      "VISIBLE","INVALIDATIONS","CLEANUP_INFO","VACUUM",
+      "PRUNE","FREEZE_PAGE",
+      "COMMIT",
+      "CHECKPOINT_SHUTDOWN","CHECKPOINT_ONLINE","NEXTOID",
+      "CLEAN","RUNNING_XACTS",
+      "FPI","FPI_FOR_HINT",
+      "ZEROPAGE"
+    },
+  },
+  { Id=2,
+    Regex=[[UPDATE\+INIT]] -- does not work in list
+  },
+  { Id=2,
+    Regex=[[INSERT\+INIT]] -- does not work in list
+  },
+  -- fpw mark
+  { Id=2,
+    List={"FPW"}
+  },
+  -- rel, fork, blk
+  { Id=3,
+    Regex=[[rel \d+/\d+/\d+(?: fork \w+)? blk \d+]],
+  },
+  -- lsn
+  { Id=3,
+    Regex=[[[A-F0-9]+/[A-F0-9]+]],
+  },
+  -- timestamp
+  { Id=4,
+    Regex=[[\d\d\d\d\-\d\d-\d\d \d\d\:\d\d\:\d\d\.\d\d\d\d\d\d [A-Z]{3}]],
+  },
+  -- do not highlight the following
+  -- number
+  { Id=99,
+    Regex=[[[0-9]+]],
+  },
+}
+
+IgnoreCase=false
