@@ -1,7 +1,15 @@
 
-* process_task
+CREATE FUNCTION complete_task(task tasks, status text, result text) RETURNS void
+LANGUAGE sql VOLATILE
+BEGIN ATOMIC
+    UPDATE tasks
+    SET finished = current_timestamp,
+        status = complete_task.status,
+        result = complete_task.result
+    WHERE task_id = task.task_id;
+END;
 
-```sql
+
 CREATE OR REPLACE PROCEDURE process_tasks() AS $$
 DECLARE
     task tasks;
@@ -17,8 +25,9 @@ BEGIN
         CONTINUE forever WHEN task.task_id IS NULL;
 
         BEGIN
-            result := empapi.run(task);
-            PERFORM complete_task(task, 'finished', result || E'\nПопытка: ' || task.attempt_count);
+            result := empapi.run(task);			
+            PERFORM complete_task(task, 'finished123', result || E'\nПопытка: ' || task.attempt_count);
+            -- сделать вывод сюда - 'Повезло. Попытка'
         EXCEPTION
             WHEN others THEN
                 GET STACKED DIAGNOSTICS
@@ -41,53 +50,39 @@ BEGIN
                     );
                 END IF;
         END;
-
         COMMIT;
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
 
-```
-
-нужно поменять PERFORM complete_task(task, 'finished', result || E'\nПопытка: ' || task.attempt_count);
-на select PERFORM complete_task(task, 'finished', result || E'\nПопытка: ' || task.attempt_count);
 
 
-#### 2. **Создайте функцию `is_lucky_2(jsonb)`**, которая принимает параметр `jsonb` и работает аналогично `is_lucky`, но с нужной сигнатурой:
-
-```sql
 CREATE OR REPLACE FUNCTION is_lucky_2(params jsonb)
 RETURNS TABLE(num int, greeting text) AS $$
 BEGIN
     IF random() < 0.3 THEN
-        RETURN QUERY SELECT 1 AS num, 'Мне повезло' AS greeting;
+        RETURN QUERY SELECT 1 AS num, 'Мне повезло' AS greeting; -- отдать результат в  PROCEDURE process_tasks
+
     ELSE
         RAISE EXCEPTION 'Не повезло :(';
     END IF;
 END;
 $$ LANGUAGE plpgsql;
-```
 
-> Функция возвращает таблицу, как ожидается функцией `empapi.run`, и принимает `jsonb`, как требуется в PL/Python коде.
 
----
 
-#### 2. **Проверьте, что в таблице `programs` функция зарегистрирована корректно:**
 
-```sql
+
+
 INSERT INTO programs (name, func)
 VALUES ('Ловец удачи', 'is_lucky_2');
-```
 
-> Не забудьте, что `func` — это имя SQL-функции без скобок, передаваемой в `empapi.run`.
 
----
+ SELECT * FROM pg_background_detach(
+    pg_background_launch('CALL process_tasks()')
+);
 
-Теперь после запуска фоновой процедуры:
 
-```sql
-CALL process_tasks();
-```
 
-задание должно выполняться с 30% вероятностью успеха, с 3 попытками в случае ошибки.
+
 

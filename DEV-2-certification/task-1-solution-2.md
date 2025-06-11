@@ -1,6 +1,4 @@
 
-* process_task
-
 ```sql
 CREATE OR REPLACE PROCEDURE process_tasks() AS $$
 DECLARE
@@ -47,20 +45,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-```
 
-нужно поменять PERFORM complete_task(task, 'finished', result || E'\nПопытка: ' || task.attempt_count);
-на select PERFORM complete_task(task, 'finished', result || E'\nПопытка: ' || task.attempt_count);
-
-
-#### 2. **Создайте функцию `is_lucky_2(jsonb)`**, которая принимает параметр `jsonb` и работает аналогично `is_lucky`, но с нужной сигнатурой:
-
-```sql
 CREATE OR REPLACE FUNCTION is_lucky_2(params jsonb)
 RETURNS TABLE(num int, greeting text) AS $$
 BEGIN
     IF random() < 0.3 THEN
-        RETURN QUERY SELECT 1 AS num, 'Мне повезло' AS greeting;
+        RETURN QUERY SELECT 1 AS num, 'Мне повезло с попытки' ||  num AS greeting;
     ELSE
         RAISE EXCEPTION 'Не повезло :(';
     END IF;
