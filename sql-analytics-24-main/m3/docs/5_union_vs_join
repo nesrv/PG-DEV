@@ -1,0 +1,213 @@
+# UNION vs JOIN в PostgreSQL: когда что использовать
+
+## Основное отличие
+
+**JOIN** — соединяет таблицы **горизонтально** (добавляет столбцы)
+**UNION** — объединяет таблицы **вертикально** (добавляет строки)
+
+## Визуальное представление
+
+### JOIN (горизонтальное объединение)
+```
+Таблица A:       Таблица B:       Результат JOIN:
+[ id | name ]    [ id | age ]     [ id | name | age ]
+  1    John        1    25          1    John   25
+  2    Jane        2    30          2    Jane   30
+```
+
+### UNION (вертикальное объединение)
+```
+Таблица A:       Таблица B:       Результат UNION:
+[ id | name ]    [ id | name ]    [ id | name ]
+  1    John        3    Mike         1    John
+  2    Jane        4    Sarah        2    Jane
+                                     3    Mike
+                                     4    Sarah
+```
+
+## Когда использовать JOIN?
+
+### 1. INNER JOIN - когда нужны связанные данные
+```sql
+-- Пользователи и их заказы
+SELECT u.name, o.order_date, o.amount
+FROM users u
+INNER JOIN orders o ON u.id = o.user_id;
+```
+
+### 2. LEFT JOIN - когда нужны все записи из левой таблицы
+```sql
+-- Все пользователи и их заказы (если есть)
+SELECT u.name, o.order_date
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id;
+```
+
+### 3. MULTIPLE JOIN - сложные связи
+```sql
+-- Пользователи, их заказы и товары в заказах
+SELECT u.name, o.order_date, p.product_name
+FROM users u
+JOIN orders o ON u.id = o.user_id
+JOIN order_items oi ON o.id = oi.order_id
+JOIN products p ON oi.product_id = p.id;
+```
+
+## Когда использовать UNION?
+
+### 1. Объединение похожих данных из разных таблиц
+```sql
+-- Все клиенты и поставщики как один список контактов
+SELECT 'customer' as type, name, email, phone
+FROM customers
+UNION ALL
+SELECT 'supplier' as type, company_name, email, phone
+FROM suppliers;
+```
+
+### 2. Агрегация данных из разных источников
+```sql
+-- Продажи за январь и февраль
+SELECT 'January' as month, amount, sale_date
+FROM january_sales
+UNION ALL
+SELECT 'February' as month, amount, sale_date
+FROM february_sales;
+```
+
+### 3. Создание реестров и отчетов
+```sql
+-- Общий реестр всех людей в системе
+SELECT id, name, 'employee' as role
+FROM employees
+UNION ALL
+SELECT id, name, 'client' as role
+FROM clients
+UNION ALL
+SELECT id, name, 'partner' as role
+FROM partners;
+```
+
+## Сравнение JOIN и UNION
+
+### JOIN используется когда:
+- ✅ Нужно объединить данные из разных таблиц по связи
+- ✅ Требуется дополнить записи дополнительными колонками
+- ✅ Необходимо фильтровать данные на основе связанных таблиц
+- ✅ Нужно создать денормализованное представление данных
+
+### UNION используется когда:
+- ✅ Нужно объединить результаты с одинаковой структурой
+- ✅ Требуется создать общий список из разных источников
+- ✅ Необходимо собрать статистику из похожих таблиц
+- ✅ Нужно удалить дубликаты (UNION) или оставить их (UNION ALL)
+
+## Практические примеры
+
+### Пример 1: JOIN для анализа заказов
+```sql
+-- Детальная информация о заказах
+SELECT 
+    o.order_id,
+    u.name as customer_name,
+    p.product_name,
+    oi.quantity,
+    oi.price * oi.quantity as total
+FROM orders o
+JOIN users u ON o.user_id = u.id
+JOIN order_items oi ON o.id = oi.order_id
+JOIN products p ON oi.product_id = p.id;
+```
+
+### Пример 2: UNION для консолидации отчетов
+```sql
+-- Ежемесячная статистика продаж
+SELECT 
+    'Q1' as quarter,
+    'January' as month,
+    SUM(amount) as total_sales
+FROM january_sales
+UNION ALL
+SELECT 
+    'Q1',
+    'February',
+    SUM(amount)
+FROM february_sales
+UNION ALL
+SELECT 
+    'Q1',
+    'March',
+    SUM(amount)
+FROM march_sales;
+```
+
+### Пример 3: Комбинация JOIN и UNION
+```sql
+-- Все транзакции (пополнения и списания)
+SELECT 
+    u.name,
+    'deposit' as transaction_type,
+    d.amount,
+    d.date
+FROM users u
+JOIN deposits d ON u.id = d.user_id
+UNION ALL
+SELECT 
+    u.name,
+    'withdrawal' as transaction_type,
+    w.amount,
+    w.date
+FROM users u
+JOIN withdrawals w ON u.id = w.user_id
+ORDER BY date;
+```
+
+## Важные особенности UNION
+
+### UNION vs UNION ALL
+```sql
+-- Удаляет дубликаты (медленнее)
+SELECT name FROM table1
+UNION
+SELECT name FROM table2;
+
+-- Сохраняет все строки (быстрее)
+SELECT name FROM table1
+UNION ALL
+SELECT name FROM table2;
+```
+
+### Требования к UNION:
+- Одинаковое количество столбцов
+- Совместимые типы данных
+- Одинаковый порядок столбцов
+
+## Производительность
+
+### JOIN обычно быстрее когда:
+- Есть индексы на связываемых столбцах
+- Таблицы нормализованы
+- Используются правильные типы JOIN
+
+### UNION ALL быстрее UNION:
+- UNION требует сортировку для удаления дубликатов
+- UNION ALL просто объединяет результаты
+
+## Чеклист выбора
+
+### Выбирайте JOIN если:
+- [ ] Нужно соединить данные по связи
+- [ ] Требуется дополнить записи новыми колонками
+- [ ] Данные в таблицах разной структуры
+- [ ] Нужна фильтрация по связанным таблицам
+
+### Выбирайте UNION если:
+- [ ] Нужно объединить результаты запросов
+- [ ] Данные имеют одинаковую структуру
+- [ ] Требуется создать общий список
+- [ ] Нужно собрать данные из похожих таблиц
+
+## Золотое правило
+
+**Используйте JOIN для расширения записей (больше колонок)**
+**Используйте UNION для увеличения записей (больше строк)**
